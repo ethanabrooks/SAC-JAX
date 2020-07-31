@@ -13,5 +13,5 @@ class TrainerEnv(gym.Env, Trainer):
     def generator(self):
         pass
 
-    def render(self, mode='human'):
+    def render(self, mode="human"):
         pass

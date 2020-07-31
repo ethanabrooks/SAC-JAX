@@ -59,16 +59,9 @@ class Trainer:
         env = gym.make(env_id)
         env.seed(seed)
 
-        state_dim = env.observation_space.shape[0]
+        obs_dim = env.observation_space.shape[0]
         action_dim = env.action_space.shape[0]
         max_action = float(env.action_space.high[0])
-
-        state, done = env.reset(), False
-        episode_reward = 0
-        episode_timesteps = 0
-        episode_num = 0
-
-        rng = jax.random.PRNGKey(seed)
 
         self.agent = agent = Agent(
             policy=policy,
@@ -80,11 +73,19 @@ class Trainer:
             policy_noise=policy_noise,
             policy_freq=policy_freq,
         )
-        iterator = agent.generator(rng, sample_state=state)
+
+        obs, done = env.reset(), False
+        episode_reward = 0
+        episode_timesteps = 0
+        episode_num = 0
+
+        rng = jax.random.PRNGKey(seed)
+
+        iterator = agent.generator(rng, sample_state=obs)
 
         params = next(iterator)
 
-        replay_buffer = ReplayBuffer(state_dim, action_dim, max_size=replay_size)
+        replay_buffer = ReplayBuffer(obs_dim, action_dim, max_size=replay_size)
 
         # Evaluate untrained policy.
         # We evaluate for 100 episodes as 10 episodes provide a very noisy estimation in some domains.
@@ -104,14 +105,14 @@ class Trainer:
             else:
                 rng, noise_rng = jax.random.split(rng)
                 action = (
-                    agent.policy(params, state)
+                    agent.policy(params, obs)
                     + jax.random.normal(noise_rng, (action_dim,))
                     * max_action
                     * expl_noise
                 ).clip(-max_action, max_action)
 
             # Perform action
-            next_state, reward, done, _ = env.step(action)
+            next_obs, reward, done, _ = env.step(action)
             # This 'trick' converts the finite-horizon task into an infinite-horizon one. It does change the problem
             # we are solving, however it has been observed empirically to work pretty well. noinspection
             # noinspection PyProtectedMember
@@ -119,9 +120,9 @@ class Trainer:
             done_bool = float(done) if episode_timesteps < steps else 0
 
             # Store data in replay buffer
-            replay_buffer.add(state, action, next_state, reward, done_bool)
+            replay_buffer.add(obs, action, next_obs, reward, done_bool)
 
-            state = next_state
+            obs = next_obs
             episode_reward += reward
 
             # Train agent after collecting sufficient data
@@ -139,7 +140,7 @@ class Trainer:
                     f"Reward: {episode_reward:.3f} "
                 )
                 # Reset environment
-                state, done = env.reset(), False
+                obs, done = env.reset(), False
                 episode_reward = 0
                 episode_timesteps = 0
                 episode_num += 1
@@ -165,13 +166,13 @@ class Trainer:
 
         avg_reward = 0.0
         for _ in range(self.eval_episodes):
-            state, done = eval_env.reset(), False
+            obs, done = eval_env.reset(), False
             # noinspection PyProtectedMember
             remaining_steps = eval_env._max_episode_steps
 
             while not done:
-                action = self.agent.policy(params, state)
-                state, reward, done, _ = eval_env.step(action)
+                action = self.agent.policy(params, obs)
+                obs, reward, done, _ = eval_env.step(action)
 
                 remaining_steps -= 1
 
@@ -188,7 +189,4 @@ class Trainer:
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
     add_arguments(PARSER)
-    # TODO: Model saving and loading is not supported yet.
-    # parser.add_argument("--save_model", action="store_true")  # Save model and optimizer parameters
-    # parser.add_argument("--load_model", default="")  # Model load file name, "" doesn't load, "default" uses file_name
     Trainer(**vars(PARSER.parse_args()))

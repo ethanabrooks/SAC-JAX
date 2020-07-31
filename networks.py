@@ -15,7 +15,7 @@ class Actor(hk.Module):
         self.action_dim = action_dim
         self.max_action = max_action
 
-    def __call__(self, state: np.ndarray) -> jnp.DeviceArray:
+    def __call__(self, obs: np.ndarray) -> jnp.DeviceArray:
         actor_net = hk.Sequential(
             [
                 hk.Flatten(),
@@ -41,7 +41,7 @@ class Actor(hk.Module):
                 ),
             ]
         )
-        return jnp.tanh(actor_net(state)) * self.max_action
+        return jnp.tanh(actor_net(obs)) * self.max_action
 
 
 class Critic(hk.Module):
@@ -49,7 +49,7 @@ class Critic(hk.Module):
         super(Critic, self).__init__()
 
     def __call__(
-        self, state_action: np.ndarray
+        self, obs_action: np.ndarray
     ) -> Tuple[jnp.DeviceArray, jnp.DeviceArray]:
         def critic_net():
             return hk.Sequential(
@@ -82,4 +82,4 @@ class Critic(hk.Module):
 
         critic_net_2 = critic_net()
 
-        return critic_net_1(state_action), critic_net_2(state_action)
+        return critic_net_1(obs_action), critic_net_2(obs_action)

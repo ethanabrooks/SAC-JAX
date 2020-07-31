@@ -85,7 +85,7 @@ class Agent(object):
 
             # Provide each element an independent rng sample.
 
-            # state, action, next_state, reward, not_done = replay_buffer.sample(
+            # obs, action, next_obs, reward, not_done = replay_buffer.sample(
             #     batch_size, replay_rand
             # )
 
@@ -100,7 +100,7 @@ class Agent(object):
 
             if update % self.policy_freq == 0:
                 actor_params, actor_opt_state = self.update_actor(
-                    actor_params, critic_params, actor_opt_state, sample.state
+                    actor_params, critic_params, actor_opt_state, sample.obs
                 )
 
                 target_actor_params = soft_update(target_actor_params, actor_params)
@@ -108,19 +108,19 @@ class Agent(object):
 
     @functools.partial(jax.jit, static_argnums=0)
     def critic_1(
-        self, critic_params: hk.Params, state_action: np.ndarray
+        self, critic_params: hk.Params, obs_action: np.ndarray
     ) -> jnp.DeviceArray:
         """Retrieves the result from a single critic network. Relevant for the actor update rule."""
-        return self.critic.apply(critic_params, state_action)[0].squeeze(-1)
+        return self.critic.apply(critic_params, obs_action)[0].squeeze(-1)
 
     @functools.partial(jax.jit, static_argnums=0)
     def actor_loss(
-        self, actor_params: hk.Params, critic_params: hk.Params, state: np.ndarray
+        self, actor_params: hk.Params, critic_params: hk.Params, obs: np.ndarray
     ) -> jnp.DeviceArray:
         """Standard DDPG update rule based on the gradient through a single critic network."""
-        action = self.actor.apply(actor_params, state)
+        action = self.actor.apply(actor_params, obs)
         return -jnp.mean(
-            self.critic_1(critic_params, jnp.concatenate((state, action), 1))
+            self.critic_1(critic_params, jnp.concatenate((obs, action), 1))
         )
 
     @functools.partial(jax.jit, static_argnums=0)
@@ -129,11 +129,11 @@ class Agent(object):
         actor_params: hk.Params,
         critic_params: hk.Params,
         actor_opt_state: OptState,
-        state: np.ndarray,
+        obs: np.ndarray,
     ) -> Tuple[hk.Params, OptState]:
         """Learning rule (stochastic gradient descent)."""
         _, gradient = jax.value_and_grad(self.actor_loss)(
-            actor_params, critic_params, state
+            actor_params, critic_params, obs
         )
         updates, opt_state = self.actor_opt_update(gradient, actor_opt_state)
         new_params = optix.apply_updates(actor_params, updates)
@@ -145,9 +145,9 @@ class Agent(object):
         critic_params: hk.Params,
         target_critic_params: hk.Params,
         target_actor_params: hk.Params,
-        state: np.ndarray,
+        obs: np.ndarray,
         action: np.ndarray,
-        next_state: np.ndarray,
+        next_obs: np.ndarray,
         reward: np.ndarray,
         not_done: np.ndarray,
         rng: jnp.ndarray,
@@ -163,12 +163,12 @@ class Agent(object):
         )
 
         # Make sure the noisy action is within the valid bounds.
-        next_action = (self.actor.apply(target_actor_params, next_state) + noise).clip(
+        next_action = (self.actor.apply(target_actor_params, next_obs) + noise).clip(
             -self.max_action, self.max_action
         )
 
         next_q_1, next_q_2 = self.critic.apply(
-            target_critic_params, jnp.concatenate((next_state, next_action), 1)
+            target_critic_params, jnp.concatenate((next_obs, next_action), 1)
         )
         if self.td3_update:
             next_q = jax.lax.min(next_q_1, next_q_2)
@@ -178,11 +178,11 @@ class Agent(object):
             next_q = next_q_1
         # Cut the gradient from flowing through the target critic. This is more efficient, computationally.
         target_q = jax.lax.stop_gradient(reward + self.discount * next_q * not_done)
-        q_1, q_2 = self.critic.apply(critic_params, jnp.concatenate((state, action), 1))
+        q_1, q_2 = self.critic.apply(critic_params, jnp.concatenate((obs, action), 1))
 
         return jnp.mean(rlax.l2_loss(q_1, target_q) + rlax.l2_loss(q_2, target_q))
 
-    @functools.partial(jax.jit, static_argnums=0)
+    # @functools.partial(jax.jit, static_argnums=0)
     def update_critic(
         self,
         critic_params: hk.Params,
@@ -194,12 +194,16 @@ class Agent(object):
     ) -> Tuple[hk.Params, OptState]:
         """Learning rule (stochastic gradient descent)."""
         _, gradient = jax.value_and_grad(self.critic_loss)(
-            critic_params, target_critic_params, target_actor_params, rng, **kwargs
+            critic_params,
+            target_critic_params=target_critic_params,
+            target_actor_params=target_actor_params,
+            rng=rng,
+            **kwargs,
         )
         updates, opt_state = self.critic_opt_update(gradient, critic_opt_state)
         new_params = optix.apply_updates(critic_params, updates)
         return new_params, opt_state
 
     @functools.partial(jax.jit, static_argnums=0)
-    def policy(self, actor_params: hk.Params, state: np.ndarray) -> jnp.DeviceArray:
-        return self.actor.apply(actor_params, state)
+    def policy(self, actor_params: hk.Params, obs: np.ndarray) -> jnp.DeviceArray:
+        return self.actor.apply(actor_params, obs)
