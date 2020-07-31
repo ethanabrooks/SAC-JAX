@@ -49,8 +49,10 @@ class Critic(hk.Module):
         super(Critic, self).__init__()
 
     def __call__(
-        self, obs_action: np.ndarray
+        self, obs: np.ndarray, action: np.ndarray
     ) -> Tuple[jnp.DeviceArray, jnp.DeviceArray]:
+        obs_action = jnp.concatenate((obs, action), -1)
+
         def critic_net():
             return hk.Sequential(
                 [

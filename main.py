@@ -81,7 +81,7 @@ class Trainer:
 
         rng = jax.random.PRNGKey(seed)
 
-        iterator = agent.generator(rng, sample_state=obs)
+        iterator = agent.generator(rng, sample_obs=obs)
 
         params = next(iterator)
 

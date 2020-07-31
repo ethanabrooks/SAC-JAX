@@ -55,39 +55,25 @@ class Agent(object):
         self.actor_opt_init, self.actor_opt_update = optix.adam(lr)
         self.critic_opt_init, self.critic_opt_update = optix.adam(lr)
         self.actor = hk.transform(lambda x: Actor(action_dim, max_action)(x))
-        self.critic = hk.transform(lambda x: Critic()(x))
+        self.critic = hk.transform(lambda x, a: Critic()(x, a))
 
     def generator(
-        self, rng: jnp.ndarray, sample_state: np.ndarray,
+        self, rng: jnp.ndarray, sample_obs: np.ndarray,
     ):
         rng, actor_rng, critic_rng = jax.random.split(rng, 3)
-        actor_params = target_actor_params = self.actor.init(actor_rng, sample_state)
+        actor_params = target_actor_params = self.actor.init(actor_rng, sample_obs)
         actor_opt_state = self.actor_opt_init(actor_params)
 
-        action = self.actor.apply(actor_params, sample_state)
+        action = self.actor.apply(actor_params, sample_obs)
 
         critic_params = target_critic_params = self.critic.init(
-            critic_rng, jnp.concatenate((sample_state, action), 0)
+            critic_rng, sample_obs, action
         )
         critic_opt_state = self.critic_opt_init(critic_params)
 
-        #    def update(
-        #        self, replay_buffer: rb.ReplayBuffer, batch_size: int, rng: jnp.ndarray
-        #    ) -> None:
-        #        """
-        #            Sample batch of transitions and update both the policy and critic networks.
-        #            As this function contains a conditional function, periodically updating the actor, we do
-        # not jit compile it.
-        #        """
         for update in itertools.count():
             sample = yield actor_params
             rng, actor_rng, critic_rng = jax.random.split(rng, 3)
-
-            # Provide each element an independent rng sample.
-
-            # obs, action, next_obs, reward, not_done = replay_buffer.sample(
-            #     batch_size, replay_rand
-            # )
 
             critic_params, critic_opt_state = self.update_critic(
                 critic_params,
@@ -108,10 +94,10 @@ class Agent(object):
 
     @functools.partial(jax.jit, static_argnums=0)
     def critic_1(
-        self, critic_params: hk.Params, obs_action: np.ndarray
+        self, critic_params: hk.Params, obs: np.ndarray, action: np.ndarray
     ) -> jnp.DeviceArray:
         """Retrieves the result from a single critic network. Relevant for the actor update rule."""
-        return self.critic.apply(critic_params, obs_action)[0].squeeze(-1)
+        return self.critic.apply(critic_params, obs, action)[0].squeeze(-1)
 
     @functools.partial(jax.jit, static_argnums=0)
     def actor_loss(
@@ -119,9 +105,7 @@ class Agent(object):
     ) -> jnp.DeviceArray:
         """Standard DDPG update rule based on the gradient through a single critic network."""
         action = self.actor.apply(actor_params, obs)
-        return -jnp.mean(
-            self.critic_1(critic_params, jnp.concatenate((obs, action), 1))
-        )
+        return -jnp.mean(self.critic_1(critic_params, obs, action))
 
     @functools.partial(jax.jit, static_argnums=0)
     def update_actor(
@@ -168,7 +152,7 @@ class Agent(object):
         )
 
         next_q_1, next_q_2 = self.critic.apply(
-            target_critic_params, jnp.concatenate((next_obs, next_action), 1)
+            target_critic_params, next_obs, next_action
         )
         if self.td3_update:
             next_q = jax.lax.min(next_q_1, next_q_2)
@@ -178,7 +162,7 @@ class Agent(object):
             next_q = next_q_1
         # Cut the gradient from flowing through the target critic. This is more efficient, computationally.
         target_q = jax.lax.stop_gradient(reward + self.discount * next_q * not_done)
-        q_1, q_2 = self.critic.apply(critic_params, jnp.concatenate((obs, action), 1))
+        q_1, q_2 = self.critic.apply(critic_params, obs, action)
 
         return jnp.mean(rlax.l2_loss(q_1, target_q) + rlax.l2_loss(q_2, target_q))
 
