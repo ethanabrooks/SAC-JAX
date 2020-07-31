@@ -1,5 +1,8 @@
+import itertools
+from dataclasses import dataclass
 from typing import Any, Tuple
 import haiku as hk
+import haiku._src.typing as hkt
 import jax
 import jax.numpy as jnp
 from jax.experimental import optix
@@ -7,9 +10,15 @@ import rlax
 import numpy as np
 from networks import Actor, Critic
 import functools
-import replay_buffer as rb
 
 OptState = Any
+
+
+@dataclass
+class Params:
+    t = hkt.Params
+    params: t
+    opt_params: t
 
 
 # Perform Polyak averaging provided two network parameters and the averaging value tau.
@@ -35,77 +44,67 @@ class Agent(object):
         noise_clip: float,
         policy_noise: float,
         policy_freq: int,
-        actor_rng: jnp.ndarray,
-        critic_rng: jnp.ndarray,
-        sample_state: np.ndarray,
     ):
+        self.lr = lr
         self.discount = discount
         self.noise_clip = noise_clip
         self.policy_noise = policy_noise
         self.policy_freq = policy_freq
         self.max_action = max_action
         self.td3_update = policy == "TD3"
-
+        self.actor_opt_init, self.actor_opt_update = optix.adam(lr)
+        self.critic_opt_init, self.critic_opt_update = optix.adam(lr)
         self.actor = hk.transform(lambda x: Actor(action_dim, max_action)(x))
-        actor_opt_init, self.actor_opt_update = optix.adam(lr)
-
         self.critic = hk.transform(lambda x: Critic()(x))
-        critic_opt_init, self.critic_opt_update = optix.adam(lr)
 
-        self.actor_params = self.target_actor_params = self.actor.init(
-            actor_rng, sample_state
-        )
-        self.actor_opt_state = actor_opt_init(self.actor_params)
+    def generator(
+        self, rng: jnp.ndarray, sample_state: np.ndarray,
+    ):
+        rng, actor_rng, critic_rng = jax.random.split(rng, 3)
+        actor_params = target_actor_params = self.actor.init(actor_rng, sample_state)
+        actor_opt_state = self.actor_opt_init(actor_params)
 
-        action = self.actor.apply(self.actor_params, sample_state)
+        action = self.actor.apply(actor_params, sample_state)
 
-        self.critic_params = self.target_critic_params = self.critic.init(
+        critic_params = target_critic_params = self.critic.init(
             critic_rng, jnp.concatenate((sample_state, action), 0)
         )
-        self.critic_opt_state = critic_opt_init(self.critic_params)
+        critic_opt_state = self.critic_opt_init(critic_params)
 
-        self.updates = 0
+        #    def update(
+        #        self, replay_buffer: rb.ReplayBuffer, batch_size: int, rng: jnp.ndarray
+        #    ) -> None:
+        #        """
+        #            Sample batch of transitions and update both the policy and critic networks.
+        #            As this function contains a conditional function, periodically updating the actor, we do
+        # not jit compile it.
+        #        """
+        for update in itertools.count():
+            sample = yield actor_params
+            rng, actor_rng, critic_rng = jax.random.split(rng, 3)
 
-    def update(
-        self, replay_buffer: rb.ReplayBuffer, batch_size: int, rng: jnp.ndarray
-    ) -> None:
-        """
-            Sample batch of transitions and update both the policy and critic networks.
-            As this function contains a conditional function, periodically updating the actor, we do not jit compile it.
-        """
-        self.updates += 1
+            # Provide each element an independent rng sample.
 
-        # Provide each element an independent rng sample.
-        replay_rand, critic_rand = jax.random.split(rng)
+            # state, action, next_state, reward, not_done = replay_buffer.sample(
+            #     batch_size, replay_rand
+            # )
 
-        state, action, next_state, reward, not_done = replay_buffer.sample(
-            batch_size, replay_rand
-        )
-
-        self.critic_params, self.critic_opt_state = self.update_critic(
-            self.critic_params,
-            self.target_critic_params,
-            self.target_actor_params,
-            self.critic_opt_state,
-            state,
-            action,
-            next_state,
-            reward,
-            not_done,
-            critic_rand,
-        )
-
-        if self.updates % self.policy_freq == 0:
-            self.actor_params, self.actor_opt_state = self.update_actor(
-                self.actor_params, self.critic_params, self.actor_opt_state, state
+            critic_params, critic_opt_state = self.update_critic(
+                critic_params,
+                target_critic_params=target_critic_params,
+                target_actor_params=target_actor_params,
+                critic_opt_state=critic_opt_state,
+                rng=critic_rng,
+                **vars(sample),
             )
 
-            self.target_actor_params = soft_update(
-                self.target_actor_params, self.actor_params
-            )
-            self.target_critic_params = soft_update(
-                self.target_critic_params, self.critic_params
-            )
+            if update % self.policy_freq == 0:
+                actor_params, actor_opt_state = self.update_actor(
+                    actor_params, critic_params, actor_opt_state, sample.state
+                )
+
+                target_actor_params = soft_update(target_actor_params, actor_params)
+                target_critic_params = soft_update(target_critic_params, critic_params)
 
     @functools.partial(jax.jit, static_argnums=0)
     def critic_1(
@@ -190,24 +189,12 @@ class Agent(object):
         target_critic_params: hk.Params,
         target_actor_params: hk.Params,
         critic_opt_state: OptState,
-        state: np.ndarray,
-        action: np.ndarray,
-        next_state: np.ndarray,
-        reward: np.ndarray,
-        not_done: np.ndarray,
         rng: jnp.ndarray,
+        **kwargs,
     ) -> Tuple[hk.Params, OptState]:
         """Learning rule (stochastic gradient descent)."""
         _, gradient = jax.value_and_grad(self.critic_loss)(
-            critic_params,
-            target_critic_params,
-            target_actor_params,
-            state,
-            action,
-            next_state,
-            reward,
-            not_done,
-            rng,
+            critic_params, target_critic_params, target_actor_params, rng, **kwargs
         )
         updates, opt_state = self.critic_opt_update(gradient, critic_opt_state)
         new_params = optix.apply_updates(critic_params, updates)

@@ -1,7 +1,18 @@
+from dataclasses import dataclass
+
 import numpy as np
+import jax.numpy as jnp
 import jax
 
-from typing import Tuple
+
+@dataclass
+class Sample:
+    T = np.ndarray
+    state: T
+    action: T
+    next_state: T
+    reward: T
+    done: T
 
 
 class ReplayBuffer(object):
@@ -36,13 +47,11 @@ class ReplayBuffer(object):
         self.ptr = (self.ptr + 1) % self.max_size
         self.size = min(self.size + 1, self.max_size)
 
-    def sample(
-        self, batch_size: int, rng: jax.numpy.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def sample(self, batch_size: int, rng: jnp.ndarray) -> Sample:
         """Given a JAX PRNG key, sample batch from memory."""
         ind = jax.random.randint(rng, (batch_size,), 0, self.size)
 
-        return (
+        return Sample(
             self.state[ind],
             self.action[ind],
             self.next_state[ind],
