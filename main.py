@@ -18,26 +18,52 @@ OptState = Any
 
 
 def add_arguments(parser):
-    parser.add_argument("--policy", default="TD3", choices=['TD3', 'DDPG'])  # Policy name (TD3, DDPG)
-    parser.add_argument("--env", dest="env_id", default="Pendulum-v0")  # OpenAI gym environment name
-    parser.add_argument("--seed", type=int, required=True)  # Sets Gym, PyTorch and Numpy seeds
-    parser.add_argument("--start_timesteps", default=25000, type=int)  # Time steps initial random policy is used
-    parser.add_argument("--eval_freq", default=5e3, type=int)  # How often (time steps) we evaluate
-    parser.add_argument("--max_timesteps", default=1e6, type=int)  # Max time steps to run environment
-    parser.add_argument("--replay_size", default=200000, type=int)  # Size of the replay buffer
-    parser.add_argument("--expl_noise", default=0.1, type=float)  # Std of Gaussian exploration noise
-    parser.add_argument("--batch_size", default=256, type=int)  # Batch size for both actor and critic
+    parser.add_argument(
+        "--policy", default="TD3", choices=["TD3", "DDPG"]
+    )  # Policy name (TD3, DDPG)
+    parser.add_argument(
+        "--env", dest="env_id", default="Pendulum-v0"
+    )  # OpenAI gym environment name
+    parser.add_argument(
+        "--seed", type=int, required=True
+    )  # Sets Gym, PyTorch and Numpy seeds
+    parser.add_argument(
+        "--start_timesteps", default=25000, type=int
+    )  # Time steps initial random policy is used
+    parser.add_argument(
+        "--eval_freq", default=5e3, type=int
+    )  # How often (time steps) we evaluate
+    parser.add_argument(
+        "--max_timesteps", default=1e6, type=int
+    )  # Max time steps to run environment
+    parser.add_argument(
+        "--replay_size", default=200000, type=int
+    )  # Size of the replay buffer
+    parser.add_argument(
+        "--expl_noise", default=0.1, type=float
+    )  # Std of Gaussian exploration noise
+    parser.add_argument(
+        "--batch_size", default=256, type=int
+    )  # Batch size for both actor and critic
     parser.add_argument("--discount", default=0.99, type=float)  # Discount factor
-    parser.add_argument("--policy_noise", default=0.2, type=float)  # Noise added to target policy during critic update
-    parser.add_argument("--noise_clip", default=0.5, type=float)  # Range to clip target policy noise
+    parser.add_argument(
+        "--policy_noise", default=0.2, type=float
+    )  # Noise added to target policy during critic update
+    parser.add_argument(
+        "--noise_clip", default=0.5, type=float
+    )  # Range to clip target policy noise
     parser.add_argument("--lr", default=3e-4, type=float)  # Optimizer learning rates
-    parser.add_argument("--policy_freq", default=2, type=int)  # Frequency of delayed policy updates
+    parser.add_argument(
+        "--policy_freq", default=2, type=int
+    )  # Frequency of delayed policy updates
 
 
-def eval_policy(agent: Agent, env_name: str, eval_episodes: int = 10, max_steps: int = 0) -> float:
+def eval_policy(
+    agent: Agent, env_name: str, eval_episodes: int = 10, max_steps: int = 0
+) -> float:
     eval_env = gym.make(env_name)
 
-    avg_reward = 0.
+    avg_reward = 0.0
     for _ in range(eval_episodes):
         state, done = eval_env.reset(), False
         remaining_steps = max_steps * 1.0
@@ -60,22 +86,27 @@ def eval_policy(agent: Agent, env_name: str, eval_episodes: int = 10, max_steps:
 
 class Trainer:
     @classmethod
-    def main(cls,
-             env_id,
-             seed,
-             lr,
-             discount,
-             noise_clip,
-             policy_noise,
-             policy_freq,
-             replay_size,
-             max_timesteps,
-             expl_noise,
-             policy, eval_freq, start_timesteps, batch_size):
+    def main(
+        cls,
+        env_id,
+        seed,
+        lr,
+        discount,
+        noise_clip,
+        policy_noise,
+        policy_freq,
+        replay_size,
+        max_timesteps,
+        expl_noise,
+        policy,
+        eval_freq,
+        start_timesteps,
+        batch_size,
+    ):
         idx = 0
         file_name = f"{env_id}_{idx}"
         # For easy extraction of the data, we save all runs using a serially increasing indicator.
-        while os.path.exists('./results/' + policy + '/' + file_name + '.npy'):
+        while os.path.exists("./results/" + policy + "/" + file_name + ".npy"):
             idx += 1
             file_name = f"{env_id}_{idx}"
 
@@ -87,7 +118,7 @@ class Trainer:
             os.makedirs("./results/" + policy)
 
         # if save_model and not os.path.exists("./models/" + policy):
-            #     os.makedirs("./models/" + policy)
+        #     os.makedirs("./models/" + policy)
 
         env = gym.make(env_id)
         env.seed(seed)
@@ -104,23 +135,29 @@ class Trainer:
         rng = jax.random.PRNGKey(seed)
         rng, actor_rng, critic_rng = jax.random.split(rng, 3)
 
-        agent = Agent(policy,
-                      action_dim,
-                      max_action,
-                      lr,
-                      discount,
-                      noise_clip,
-                      policy_noise,
-                      policy_freq,
-                      actor_rng,
-                      critic_rng,
-                      state)
+        agent = Agent(
+            policy,
+            action_dim,
+            max_action,
+            lr,
+            discount,
+            noise_clip,
+            policy_noise,
+            policy_freq,
+            actor_rng,
+            critic_rng,
+            state,
+        )
 
         replay_buffer = ReplayBuffer(state_dim, action_dim, max_size=replay_size)
 
         # Evaluate untrained policy.
-            # We evaluate for 100 episodes as 10 episodes provide a very noisy estimation in some domains.
-        evaluations = [eval_policy(agent, env_id, max_steps=env._max_episode_steps, eval_episodes=100)]
+        # We evaluate for 100 episodes as 10 episodes provide a very noisy estimation in some domains.
+        evaluations = [
+            eval_policy(
+                agent, env_id, max_steps=env._max_episode_steps, eval_episodes=100
+            )
+        ]
         np.save(f"./results/{policy}/{file_name}", evaluations)
         best_performance = evaluations[-1]
         best_actor_params = agent.actor_params
@@ -136,14 +173,16 @@ class Trainer:
             else:
                 rng, noise_rng = jax.random.split(rng)
                 action = (
-                        agent.policy(agent.actor_params, state)
-                        + jax.random.normal(noise_rng, (action_dim, )) * max_action * expl_noise
+                    agent.policy(agent.actor_params, state)
+                    + jax.random.normal(noise_rng, (action_dim,))
+                    * max_action
+                    * expl_noise
                 ).clip(-max_action, max_action)
 
             # Perform action
             next_state, reward, done, _ = env.step(action)
             # This 'trick' converts the finite-horizon task into an infinite-horizon one. It does change the problem we are
-                # solving, however it has been observed empirically to work pretty well.
+            # solving, however it has been observed empirically to work pretty well.
             done_bool = float(done) if episode_timesteps < env._max_episode_steps else 0
 
             # Store data in replay buffer
@@ -159,7 +198,9 @@ class Trainer:
 
             if done:
                 # +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
-                print(f"Total T: {t + 1} Episode Num: {episode_num + 1} Episode T: {episode_timesteps} Reward: {episode_reward:.3f}")
+                print(
+                    f"Total T: {t + 1} Episode Num: {episode_num + 1} Episode T: {episode_timesteps} Reward: {episode_reward:.3f}"
+                )
                 # Reset environment
                 state, done = env.reset(), False
                 episode_reward = 0
@@ -168,7 +209,14 @@ class Trainer:
 
             # Evaluate episode
             if (t + 1) % eval_freq == 0:
-                evaluations.append(eval_policy(agent, env_id, max_steps=env._max_episode_steps, eval_episodes=100))
+                evaluations.append(
+                    eval_policy(
+                        agent,
+                        env_id,
+                        max_steps=env._max_episode_steps,
+                        eval_episodes=100,
+                    )
+                )
                 np.save(f"./results/{policy}/{file_name}", evaluations)
                 if evaluations[-1] > best_performance:
                     best_performance = evaluations[-1]
@@ -176,9 +224,13 @@ class Trainer:
                     # if save_model: agent.save(f"./models/{policy}/{file_name}")
 
         # At the end, re-evaluate the policy which is presumed to be best. This ensures an un-biased estimator when
-            # reporting the average best results across each run.
+        # reporting the average best results across each run.
         agent.actor_params = best_actor_params
-        evaluations.append(eval_policy(agent, env_id, max_steps=env._max_episode_steps, eval_episodes=100))
+        evaluations.append(
+            eval_policy(
+                agent, env_id, max_steps=env._max_episode_steps, eval_episodes=100
+            )
+        )
         np.save(f"./results/{policy}/{file_name}", evaluations)
         print(f"Selected policy has an average score of: {evaluations[-1]:.3f}")
 
