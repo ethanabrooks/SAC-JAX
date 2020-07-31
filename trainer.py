@@ -101,7 +101,7 @@ class Trainer:
         if use_tune:
             local_mode = num_samples is None
             ray.init(webui_host="127.0.0.1", local_mode=local_mode)
-            metric = "reward"
+            metric = "final_reward"
             kwargs = dict()
             if not local_mode:
                 points_to_evaluate = None if best is None else [getattr(configs, best)]
@@ -214,7 +214,7 @@ class Trainer:
                 params = loop.train.send(sample)
 
             except StopIteration:
-                print("Done training")
+                self.report(final_reward=self.eval_policy(params))
                 return
 
             # Evaluate episode

@@ -24,20 +24,19 @@ search = dict(
 )
 
 pendulum = {
-    "batch_size": 256,
+    "batch_size": 128,
     "discount": 0.99,
     "env_id": "Pendulum-v0",
     "eval_freq": 5000.0,
-    "expl_noise": 0.05,
-    "lr": 0.005,
-    "max_timesteps": 6000,
+    "expl_noise": 0.5,
+    "lr": 0.0005,
     "noise_clip": 0.1,
     "policy": "TD3",
     "policy_freq": 1,
     "policy_noise": 0.2,
     "replay_size": 200000,
-    "seed": 14,
-    "start_timesteps": 10,
+    "seed": 8,
+    "start_timesteps": 5,
 }
 
 double_search = dict(
