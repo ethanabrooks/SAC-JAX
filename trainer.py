@@ -88,6 +88,7 @@ class Trainer:
 
     @classmethod
     def run(cls, config):
+        pprint(config)
         cls(**config).train()
 
     @classmethod

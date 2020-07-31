@@ -2,6 +2,7 @@ import itertools
 from dataclasses import dataclass
 from typing import Any, Tuple
 import haiku as hk
+
 import haiku._src.typing as hkt
 import jax
 import jax.numpy as jnp
@@ -56,8 +57,8 @@ class Agent(object):
         self.td3_update = policy == "TD3"
         self.actor_opt_init, self.actor_opt_update = optix.adam(lr)
         self.critic_opt_init, self.critic_opt_update = optix.adam(lr)
-        self.actor = hk.transform(self.actor)
-        self.critic = hk.transform(self.critic)
+        self.actor = hk.without_apply_rng(hk.transform(self.actor))
+        self.critic = hk.without_apply_rng(hk.transform(self.critic))
 
     def actor(self, x):
         return Actor(self.action_dim, self.max_action)(x)

@@ -15,8 +15,8 @@ def big_values(start, stop):
 
 search = dict(
     batch_size=hp.choice("batch_size", medium_values(6, 10)),
-    expl_noise=hp.choice("lr", small_values(1, 3)),
-    noise_clip=hp.choice("lr", small_values(1, 3)),
+    expl_noise=hp.choice("expl_noise", small_values(1, 3)),
+    noise_clip=hp.choice("noise_clip", small_values(1, 3)),
     lr=hp.choice("lr", small_values(2, 5) + [3e-4]),
     policy_freq=hp.choice("policy_freq", [1, 2, 3]),
     seed=hp.randint("seed", 20),

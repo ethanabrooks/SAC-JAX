@@ -15,6 +15,8 @@ RUN conda env update -f /tmp/environment.yml \
 RUN echo "source activate base" >> /root/.bashrc
 ENV PATH /opt/conda/envs/jax/bin:$PATH
 
+WORKDIR "/root"
+COPY . .
 COPY entrypoint.sh /
-COPY . "/root"
+#CMD ['/bin/dash']
 ENTRYPOINT ["/entrypoint.sh"]
