@@ -159,7 +159,7 @@ class Trainer:
 
             except StopIteration:
                 print("Done training")
-                exit()
+                return
 
             # Evaluate episode
             if (t + 1) % self.eval_freq == 0:
