@@ -54,23 +54,23 @@ class Trainer:
     ):
         self.use_tune = use_tune
         self.expl_noise = expl_noise
-        self.max_timesteps = max_timesteps
-        self.eval_freq = eval_freq
-        self.start_timesteps = start_timesteps
-        self.batch_size = batch_size
-        self.replay_size = replay_size
+        self.max_timesteps = int(max_timesteps)
+        self.eval_freq = int(eval_freq)
+        self.start_timesteps = int(start_timesteps)
+        self.batch_size = int(batch_size)
+        self.replay_size = int(replay_size)
         self.env_id = env_id
-        self.eval_episodes = eval_episodes
-        self.seed = seed
+        self.eval_episodes = int(eval_episodes)
+        self.seed = int(seed)
         self.policy = policy
 
-        self.report(policy=policy, env=env_id, seed=seed)
+        self.report(policy=policy, env=env_id, seed=self.seed)
 
         # if save_model and not os.path.exists("./models/" + policy):
         #     os.makedirs("./models/" + policy)
 
         self.env = self.make_env()
-        self.env.seed(seed)
+        self.env.seed(self.seed)
         self.max_action = float(self.env.action_space.high[0])
         self.action_dim = int(np.prod(self.env.action_space.shape))
         self.obs_dim = int(np.prod(self.env.action_space.shape))
