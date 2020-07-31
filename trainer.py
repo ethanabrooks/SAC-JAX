@@ -115,7 +115,7 @@ class Trainer:
             cls.run(config)
 
     def env_loop(
-        self, params, env=None, replay_buffer=None
+        self, env=None, replay_buffer=None
     ) -> Generator[jnp.ndarray, jnp.ndarray, None]:
         env = env or self.env
         obs, done = env.reset(), False
@@ -168,8 +168,9 @@ class Trainer:
 
     def train(self):
         rng = jax.random.PRNGKey(self.seed)
-        replay_buffer, loop, params = self.init(rng)
+        replay_buffer, loop = self.init(rng)
         obs = next(loop.env)
+        params = next(loop.train)
 
         # Evaluate untrained policy.
         # We evaluate for 100 episodes as 10 episodes provide a very noisy estimation in some domains.
@@ -216,12 +217,11 @@ class Trainer:
             self.env.action_space.shape,
             max_size=self.replay_size,
         )
+        env_loop = self.env_loop(replay_buffer=replay_buffer)
         train_loop = self.agent.train_loop(
             rng, sample_obs=self.env.observation_space.sample()
         )
-        params = next(train_loop)
-        env_loop = self.env_loop(params, replay_buffer=replay_buffer)
-        return replay_buffer, Loops(train=train_loop, env=env_loop), params
+        return replay_buffer, Loops(train=train_loop, env=env_loop)
 
     def make_env(self):
         return gym.make(self.env_id)
