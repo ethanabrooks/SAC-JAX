@@ -1,6 +1,6 @@
 import gym
 
-from main import Trainer
+from trainer import Trainer
 
 
 class TrainerEnv(gym.Env, Trainer):
