@@ -11,6 +11,11 @@ from typing import Any, Generator
 import gym
 import jax
 import jax.numpy as jnp
+from ray.tune.suggest import HyperOptSearch
+
+import configs
+import ray
+from ray import tune
 
 from agent import Agent
 from args import add_arguments
@@ -28,20 +33,20 @@ class Loops:
 class Trainer:
     def __init__(
         self,
-        env_id,
-        seed,
-        lr,
-        discount,
-        noise_clip,
-        policy_noise,
-        policy_freq,
-        replay_size,
-        max_timesteps,
-        expl_noise,
-        policy,
-        eval_freq,
-        start_timesteps,
         batch_size,
+        discount,
+        env_id,
+        eval_freq,
+        expl_noise,
+        lr,
+        max_timesteps,
+        noise_clip,
+        policy,
+        policy_freq,
+        policy_noise,
+        replay_size,
+        seed,
+        start_timesteps,
         eval_episodes=100,
     ):
         self.expl_noise = expl_noise
@@ -78,6 +83,36 @@ class Trainer:
             policy_noise=policy_noise,
             policy_freq=policy_freq,
         )
+
+    @classmethod
+    def run(cls, config):
+        cls(**config).train()
+
+    @classmethod
+    def main(cls, config, use_tune, num_samples, name, **kwargs):
+        config = getattr(configs, config)
+        for k, v in kwargs.items():
+            if k not in config:
+                config[k] = v
+        if use_tune:
+            local_mode = num_samples is None
+            ray.init(webui_host="127.0.0.1", local_mode=local_mode)
+            metric = "reward"
+            kwargs = dict()
+            if local_mode:
+                kwargs = dict(
+                    search_alg=HyperOptSearch(config, metric=metric, mode="max"),
+                    num_samples=num_samples,
+                )
+            tune.run(
+                run_or_experiment=lambda c: cls.run(c),
+                name=name,
+                config=config,
+                resources_per_trial={"gpu": 1, "cpu": 2},
+                **kwargs,
+            )
+        else:
+            cls.run(config)
 
     def env_loop(
         self, params, env=None, replay_buffer=None
@@ -219,4 +254,4 @@ class Trainer:
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
     add_arguments(PARSER)
-    Trainer(**vars(PARSER.parse_args())).train()
+    Trainer.main(**vars(PARSER.parse_args()))

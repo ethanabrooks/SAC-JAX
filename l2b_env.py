@@ -9,8 +9,8 @@ from trainer import Trainer
 
 
 class L2bEnv(Trainer, gym.Env):
-    def __init__(self, context_length, steps_per_update, update_freq):
-        super().__init__()
+    def __init__(self, env_id, lr, seed=100):
+        super().__init__(,
         self.update_freq = update_freq
         self.steps_per_update = steps_per_update
         self.context_length = context_length
