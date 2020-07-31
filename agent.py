@@ -182,7 +182,7 @@ class Agent(object):
 
         return jnp.mean(rlax.l2_loss(q_1, target_q) + rlax.l2_loss(q_2, target_q))
 
-    # @functools.partial(jax.jit, static_argnums=0)
+    @functools.partial(jax.jit, static_argnums=0)
     def update_critic(
         self,
         critic_params: hk.Params,
