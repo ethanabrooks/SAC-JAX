@@ -92,7 +92,7 @@ class Trainer:
         cls(**config).train()
 
     @classmethod
-    def main(cls, config, use_tune, num_samples, name, **kwargs):
+    def main(cls, config, best, use_tune, num_samples, name, **kwargs):
         config = getattr(configs, config)
         config.update(use_tune=use_tune)
         for k, v in kwargs.items():
@@ -104,8 +104,14 @@ class Trainer:
             metric = "reward"
             kwargs = dict()
             if not local_mode:
+                points_to_evaluate = None if best is None else [getattr(configs, best)]
                 kwargs = dict(
-                    search_alg=HyperOptSearch(config, metric=metric, mode="max"),
+                    search_alg=HyperOptSearch(
+                        config,
+                        metric=metric,
+                        mode="max",
+                        points_to_evaluate=points_to_evaluate,
+                    ),
                     num_samples=num_samples,
                 )
 

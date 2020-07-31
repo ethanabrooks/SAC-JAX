@@ -20,10 +20,26 @@ search = dict(
     lr=hp.choice("lr", small_values(2, 5) + [3e-4]),
     policy_freq=hp.choice("policy_freq", [1, 2, 3]),
     seed=hp.randint("seed", 20),
-    start_timesteps=hp.choice("start_timesteps", big_values(0, 2) + [0]),
+    start_timesteps=hp.choice("start_timesteps", big_values(0, 2)),
 )
 
-pendulum = dict()
+pendulum = {
+    "batch_size": 64,
+    "discount": 0.99,
+    "env_id": "Pendulum-v0",
+    "eval_freq": 5000.0,
+    "expl_noise": 0.05,
+    "lr": 0.001,
+    "max_timesteps": 6000,
+    "noise_clip": 0.1,
+    "policy": "TD3",
+    "policy_freq": 1,
+    "policy_noise": 0.2,
+    "replay_size": 200000,
+    "seed": 5,
+    "start_timesteps": 50,
+    "use_tune": True,
+}
 
 double_search = dict(
     max_timesteps=hp.choice("max_timesteps", big_values(3, 5)),
