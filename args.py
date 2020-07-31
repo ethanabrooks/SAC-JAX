@@ -32,7 +32,7 @@ def add_arguments(parser):
         "--replay-size", default=200000, type=int
     )  # Size of the replay buffer
     parser.add_argument(
-        "--seed", type=int, required=True
+        "--seed", type=int, default=0
     )  # Sets Gym, PyTorch and Numpy seeds
     parser.add_argument(
         "--start-timesteps", default=25000, type=int
