@@ -51,11 +51,19 @@ class Agent(object):
         self.policy_noise = policy_noise
         self.policy_freq = policy_freq
         self.max_action = max_action
+        self.action_dim = action_dim
         self.td3_update = policy == "TD3"
         self.actor_opt_init, self.actor_opt_update = optix.adam(lr)
         self.critic_opt_init, self.critic_opt_update = optix.adam(lr)
-        self.actor = hk.transform(lambda x: Actor(action_dim, max_action)(x))
-        self.critic = hk.transform(lambda x, a: Critic()(x, a))
+        self.actor = hk.transform(self.actor)
+        self.critic = hk.transform(self.critic)
+
+    def actor(self, x):
+        return Actor(self.action_dim, self.max_action)(x)
+
+    @staticmethod
+    def critic(x, a):
+        return Critic()(x, a)
 
     def generator(
         self, rng: jnp.ndarray, sample_obs: np.ndarray,
