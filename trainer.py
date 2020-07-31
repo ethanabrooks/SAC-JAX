@@ -1,6 +1,8 @@
 """
     Credits: https://github.com/sfujim/TD3
 """
+from pprint import pprint
+
 import numpy as np
 
 import argparse
@@ -11,7 +13,7 @@ from typing import Any, Generator
 import gym
 import jax
 import jax.numpy as jnp
-from ray.tune.suggest import HyperOptSearch
+from ray.tune.suggest.hyperopt import HyperOptSearch
 
 import configs
 import ray
@@ -47,8 +49,10 @@ class Trainer:
         replay_size,
         seed,
         start_timesteps,
+        use_tune,
         eval_episodes=100,
     ):
+        self.use_tune = use_tune
         self.expl_noise = expl_noise
         self.max_timesteps = max_timesteps
         self.eval_freq = eval_freq
@@ -60,9 +64,7 @@ class Trainer:
         self.seed = seed
         self.policy = policy
 
-        print("---------------------------------------")
-        print(f"Policy: {policy}, Env: {env_id}, Seed: {seed}")
-        print("---------------------------------------")
+        self.report(policy=policy, env=env_id, seed=seed)
 
         # if save_model and not os.path.exists("./models/" + policy):
         #     os.makedirs("./models/" + policy)
@@ -91,6 +93,7 @@ class Trainer:
     @classmethod
     def main(cls, config, use_tune, num_samples, name, **kwargs):
         config = getattr(configs, config)
+        config.update(use_tune=use_tune)
         for k, v in kwargs.items():
             if k not in config:
                 config[k] = v
@@ -99,13 +102,17 @@ class Trainer:
             ray.init(webui_host="127.0.0.1", local_mode=local_mode)
             metric = "reward"
             kwargs = dict()
-            if local_mode:
+            if not local_mode:
                 kwargs = dict(
                     search_alg=HyperOptSearch(config, metric=metric, mode="max"),
                     num_samples=num_samples,
                 )
+
+            def run(c):
+                return cls.run(c)
+
             tune.run(
-                run_or_experiment=lambda c: cls.run(c),
+                run,
                 name=name,
                 config=config,
                 resources_per_trial={"gpu": 1, "cpu": 2},
@@ -113,6 +120,12 @@ class Trainer:
             )
         else:
             cls.run(config)
+
+    def report(self, **kwargs):
+        if self.use_tune:
+            tune.report(**kwargs)
+        else:
+            pprint(kwargs)
 
     def env_loop(
         self, env=None, replay_buffer=None
@@ -146,11 +159,11 @@ class Trainer:
 
             if done:
                 # +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
-                print(
-                    f"Total T: {t + 1} "
-                    f"Episode Num: {episode_num + 1} "
-                    f"Episode T: {episode_timesteps} "
-                    f"Reward: {episode_reward:.3f} "
+                self.report(
+                    timestep=t + 1,
+                    episode=episode_num + 1,
+                    episode_timestep=episode_timesteps,
+                    reward=episode_reward,
                 )
                 # Reset environment
                 obs, done = env.reset(), False
@@ -245,9 +258,7 @@ class Trainer:
 
         avg_reward /= self.eval_episodes
 
-        print("---------------------------------------")
-        print(f"Evaluation over {self.eval_episodes} episodes: {avg_reward:.3f}")
-        print("---------------------------------------")
+        self.report(eval_reward=avg_reward)
         return avg_reward
 
 
