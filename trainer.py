@@ -1,12 +1,14 @@
 """
     Credits: https://github.com/sfujim/TD3
 """
+import numpy as np
 
 import argparse
-from typing import Any, Generator, Tuple
+import itertools
+from dataclasses import dataclass
+from typing import Any, Generator
 
 import gym
-import haiku._src.typing as hkt
 import jax
 import jax.numpy as jnp
 
@@ -15,6 +17,12 @@ from args import add_arguments
 from replay_buffer import ReplayBuffer
 
 OptState = Any
+
+
+@dataclass
+class Loops:
+    env: Generator
+    train: Generator
 
 
 class Trainer:
@@ -54,17 +62,16 @@ class Trainer:
         # if save_model and not os.path.exists("./models/" + policy):
         #     os.makedirs("./models/" + policy)
 
-        self.env = gym.make(env_id)
+        self.env = self.make_env()
         self.env.seed(seed)
-
-        self.obs_dim = self.env.observation_space.shape[0]
-        self.action_dim = self.env.action_space.shape[0]
         self.max_action = float(self.env.action_space.high[0])
+        self.action_dim = int(np.prod(self.env.action_space.shape))
+        self.obs_dim = int(np.prod(self.env.action_space.shape))
 
         self.agent = Agent(
             policy=policy,
-            action_dim=self.action_dim,
             max_action=self.max_action,
+            action_dim=self.action_dim,
             lr=lr,
             discount=discount,
             noise_clip=noise_clip,
@@ -72,54 +79,35 @@ class Trainer:
             policy_freq=policy_freq,
         )
 
-    def generator(
-        self, rng,
-    ) -> Generator[Tuple[jnp.ndarray, hkt.Params], jnp.ndarray, None]:
-        obs, done = self.env.reset(), False
+    def env_loop(
+        self, params, env=None, replay_buffer=None
+    ) -> Generator[jnp.ndarray, jnp.ndarray, None]:
+        env = env or self.env
+        obs, done = env.reset(), False
         episode_reward = 0
         episode_timesteps = 0
         episode_num = 0
-
-        iterator = self.agent.generator(rng, sample_obs=obs)
-
-        params = next(iterator)
-
-        replay_buffer = ReplayBuffer(
-            self.obs_dim, self.action_dim, max_size=self.replay_size
-        )
-
-        # Evaluate untrained policy.
-        # We evaluate for 100 episodes as 10 episodes provide a very noisy estimation in some domains.
-        evaluations = [self.eval_policy(params)]
-        best_performance = evaluations[-1]
-        best_actor_params = params
-        # if save_model: agent.save(f"./models/{policy}/{file_name}")
 
         for t in range(int(self.max_timesteps)):
 
             episode_timesteps += 1
 
-            action = yield obs, params
+            action = yield obs
 
             # Perform action
-            next_obs, reward, done, _ = self.env.step(action)
+            next_obs, reward, done, _ = env.step(action)
             # This 'trick' converts the finite-horizon task into an infinite-horizon one. It does change the problem
             # we are solving, however it has been observed empirically to work pretty well. noinspection
             # noinspection PyProtectedMember
-            steps = self.env._max_episode_steps
+            steps = env._max_episode_steps
             done_bool = float(done) if episode_timesteps < steps else 0
 
             # Store data in replay buffer
-            replay_buffer.add(obs, action, next_obs, reward, done_bool)
+            if replay_buffer:
+                replay_buffer.add(obs, action, next_obs, reward, done_bool)
 
             obs = next_obs
             episode_reward += reward
-
-            # Train agent after collecting sufficient data
-            if t >= self.start_timesteps:
-                rng, update_rng = jax.random.split(rng)
-                sample = replay_buffer.sample(self.batch_size, rng)
-                params = iterator.send(sample)
 
             if done:
                 # +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
@@ -130,10 +118,48 @@ class Trainer:
                     f"Reward: {episode_reward:.3f} "
                 )
                 # Reset environment
-                obs, done = self.env.reset(), False
+                obs, done = env.reset(), False
                 episode_reward = 0
                 episode_timesteps = 0
                 episode_num += 1
+
+    def act(self, params, obs, rng):
+        return (
+            self.agent.policy(params, obs)
+            + jax.random.normal(rng, (self.action_dim,))
+            * self.max_action
+            * self.expl_noise
+        ).clip(-self.max_action, self.max_action)
+
+    def train(self):
+        rng = jax.random.PRNGKey(self.seed)
+        replay_buffer, loop, params = self.init(rng)
+        obs = next(loop.env)
+
+        # Evaluate untrained policy.
+        # We evaluate for 100 episodes as 10 episodes provide a very noisy estimation in some domains.
+        evaluations = [self.eval_policy(params)]  # TODO
+        best_performance = evaluations[-1]
+        best_actor_params = params
+        # if save_model: agent.save(f"./models/{policy}/{file_name}")
+
+        for _ in range(self.start_timesteps):
+            obs = loop.env.send(self.env.action_space.sample())
+        for t in itertools.count(self.start_timesteps):
+            # Select action randomly or according to policy
+            rng, noise_rng = jax.random.split(rng)
+            action = self.act(params, obs, noise_rng)
+            try:
+                obs = loop.env.send(action)
+
+                # Train agent after collecting sufficient data
+                rng, update_rng = jax.random.split(rng)
+                sample = replay_buffer.sample(self.batch_size, rng)
+                params = loop.train.send(sample)
+
+            except StopIteration:
+                print("Done training")
+                exit()
 
             # Evaluate episode
             if (t + 1) % self.eval_freq == 0:
@@ -149,31 +175,24 @@ class Trainer:
         evaluations.append(self.eval_policy(params))
         print(f"Selected policy has an average score of: {evaluations[-1]:.3f}")
 
-    def train(self):
-        rng = jax.random.PRNGKey(self.seed)
-        iterator = self.generator(rng)
-        obs, params = next(iterator)
-        rng = jax.random.PRNGKey(self.seed)
+    def init(self, rng):
+        replay_buffer = ReplayBuffer(
+            self.env.observation_space.shape,
+            self.env.action_space.shape,
+            max_size=self.replay_size,
+        )
+        train_loop = self.agent.train_loop(
+            rng, sample_obs=self.env.observation_space.sample()
+        )
+        params = next(train_loop)
+        env_loop = self.env_loop(params, replay_buffer=replay_buffer)
+        return replay_buffer, Loops(train=train_loop, env=env_loop), params
 
-        for _ in range(self.start_timesteps):
-            obs, params = iterator.send(self.env.action_space.sample())
-        while True:
-            # Select action randomly or according to policy
-            rng, noise_rng = jax.random.split(rng)
-            action = (
-                self.agent.policy(params, obs)
-                + jax.random.normal(noise_rng, (self.action_dim,))
-                * self.max_action
-                * self.expl_noise
-            ).clip(-self.max_action, self.max_action)
-            try:
-                obs, params = iterator.send(action)
-            except StopIteration:
-                print("Done training")
-                exit()
+    def make_env(self):
+        return gym.make(self.env_id)
 
     def eval_policy(self, params) -> float:
-        eval_env = gym.make(self.env_id)
+        eval_env = self.make_env()
 
         avg_reward = 0.0
         for _ in range(self.eval_episodes):

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import numpy as np
 import jax.numpy as jnp
 import jax
+from typing import Iterable
 
 
 @dataclass
@@ -18,14 +19,14 @@ class Sample:
 class ReplayBuffer(object):
     """A simple container for maintaining the history of the agent."""
 
-    def __init__(self, obs_dim: int, action_dim: int, max_size: int):
+    def __init__(self, obs_shape: Iterable, action_shape: Iterable, max_size: int):
         self.max_size = max_size
         self.ptr = 0
         self.size = 0
 
-        self.obs = np.zeros((max_size, obs_dim))
-        self.action = np.zeros((max_size, action_dim))
-        self.next_obs = np.zeros((max_size, obs_dim))
+        self.obs = np.zeros((max_size, *obs_shape))
+        self.action = np.zeros((max_size, *action_shape))
+        self.next_obs = np.zeros((max_size, *obs_shape))
         self.reward = np.zeros((max_size, 1))
         self.not_done = np.zeros((max_size, 1))
 

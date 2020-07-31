@@ -10,7 +10,7 @@ import numpy as np
 
 
 class Actor(hk.Module):
-    def __init__(self, action_dim: int, max_action: float):
+    def __init__(self, action_dim: int, max_action: np.array):
         super(Actor, self).__init__()
         self.action_dim = action_dim
         self.max_action = max_action

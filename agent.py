@@ -5,6 +5,7 @@ import haiku as hk
 import haiku._src.typing as hkt
 import jax
 import jax.numpy as jnp
+from gym.spaces import Box
 from jax.experimental import optix
 import rlax
 import numpy as np
@@ -37,21 +38,21 @@ class Agent(object):
     def __init__(
         self,
         policy: str,
+        max_action: np.array,
         action_dim: int,
-        max_action: float,
         lr: float,
         discount: float,
         noise_clip: float,
         policy_noise: float,
         policy_freq: int,
     ):
+        self.action_dim = action_dim
+        self.max_action = max_action
         self.lr = lr
         self.discount = discount
         self.noise_clip = noise_clip
         self.policy_noise = policy_noise
         self.policy_freq = policy_freq
-        self.max_action = max_action
-        self.action_dim = action_dim
         self.td3_update = policy == "TD3"
         self.actor_opt_init, self.actor_opt_update = optix.adam(lr)
         self.critic_opt_init, self.critic_opt_update = optix.adam(lr)
@@ -65,7 +66,7 @@ class Agent(object):
     def critic(x, a):
         return Critic()(x, a)
 
-    def generator(
+    def train_loop(
         self, rng: jnp.ndarray, sample_obs: np.ndarray,
     ):
         rng, actor_rng, critic_rng = jax.random.split(rng, 3)
