@@ -1,8 +1,9 @@
 import argparse
 import re
+import sys
 from functools import partial
 
-from main import add_arguments
+from args import add_arguments
 from trainer import Trainer
 from l2b_env import L2bEnv
 
@@ -15,6 +16,9 @@ class OuterTrainer(Trainer):
     @classmethod
     def run(cls, config):
         outer = re.compile(r"^outer_(.*)")
+        import ipdb
+
+        ipdb.set_trace()
 
         def get_kwargs(condition, f=None):
             for k, v in config.items():
@@ -59,13 +63,27 @@ def add_outer_arguments(parser):
     parser.add_argument("--outer-train-steps", default=1, type=int)
 
 
+class DoubleArgumentParser(argparse.ArgumentParser):
+    def add_argument(self, *args, double=True, **kwargs):
+        name, *args = args
+        if double and name.startswith("--"):
+            pattern = re.compile(r"--(.*)")
+            name1 = pattern.sub(r"--inner-\1", name)
+            super().add_argument(name1, *args, **kwargs)
+            name2 = pattern.sub(r"--outer-\1", name)
+            super().add_argument(name2, *args, **kwargs)
+        else:
+            super().add_argument(name, *args, **kwargs)
+
+
 if __name__ == "__main__":
-    PARSER = argparse.ArgumentParser()
-    PARSER.add_argument("config")
-    PARSER.add_argument("--no-tune", dest="use_tune", action="store_false")
-    PARSER.add_argument("--local-mode", action="store_true")
-    PARSER.add_argument("--num-samples", type=int)
-    PARSER.add_argument("--name")
-    add_outer_arguments(PARSER)
-    add_inner_arguments(PARSER)
+    PARSER = DoubleArgumentParser(conflict_handler="resolve")
+    PARSER.add_argument("config", double=False)
+    PARSER.add_argument(
+        "--no-tune", dest="use_tune", action="store_false", double=False
+    )
+    PARSER.add_argument("--num-samples", type=int, double=False)
+    PARSER.add_argument("--name", double=False)
+    PARSER.add_argument("--best", double=False)
+    add_arguments(PARSER)
     OuterTrainer.main(**vars(PARSER.parse_args()))

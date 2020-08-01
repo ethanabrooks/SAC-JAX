@@ -272,4 +272,9 @@ class Trainer:
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
     add_arguments(PARSER)
+    PARSER.add_argument("config")
+    PARSER.add_argument("--best")
+    PARSER.add_argument("--name")
+    PARSER.add_argument("--num-samples", type=int)
+    PARSER.add_argument("--tune", dest="use_tune", action="store_true")
     Trainer.main(**vars(PARSER.parse_args()))
