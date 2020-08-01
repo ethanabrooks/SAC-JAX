@@ -15,18 +15,16 @@ class OuterTrainer(Trainer):
 
     @classmethod
     def run(cls, config):
+        inner = re.compile(r"^inner_(.*)")
         outer = re.compile(r"^outer_(.*)")
-        import ipdb
 
-        ipdb.set_trace()
-
-        def get_kwargs(condition, f=None):
+        def get_kwargs(pattern):
             for k, v in config.items():
-                if condition(k):
-                    yield k if f is None else f(k), v
+                if pattern.match(k):
+                    yield pattern.sub(r"\1", k), v
 
-        trainer_args = dict(get_kwargs(outer.match, lambda s: outer.sub(r"\1", s)),)
-        env_args = dict(get_kwargs(lambda k: not outer.match(k)))
+        trainer_args = dict(get_kwargs(outer))
+        env_args = dict(get_kwargs(inner))
         cls(trainer_args, env_args).train()
 
     def make_env(self):

@@ -46,3 +46,9 @@ double_search = dict(
     **{"outer_" + k: v for k, v in search.items()}
 )
 double_search.update(start_timesteps=0, outer_start_timesteps=1)
+
+# TODO
+double = dict(
+    **{"outer_" + k: v for k, v in pendulum.items()},
+    **{"inner_" + k: v for k, v in pendulum.items()}
+)
