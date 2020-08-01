@@ -7,7 +7,7 @@ from typing import Iterable
 
 
 @dataclass
-class Sample:
+class BufferItem:
     T = np.ndarray
     obs: T
     action: T
@@ -30,29 +30,22 @@ class ReplayBuffer(object):
         self.reward = np.zeros((max_size, 1))
         self.not_done = np.zeros((max_size, 1))
 
-    def add(
-        self,
-        obs: np.ndarray,
-        action: np.ndarray,
-        next_obs: np.ndarray,
-        reward: float,
-        done: float,
-    ) -> None:
+    def add(self, item: BufferItem) -> None:
         """Memory built for per-transition interaction, does not handle batch updates."""
-        self.obs[self.ptr] = obs
-        self.action[self.ptr] = action
-        self.next_obs[self.ptr] = next_obs
-        self.reward[self.ptr] = reward
-        self.not_done[self.ptr] = 1.0 - done
+        self.obs[self.ptr] = item.obs
+        self.action[self.ptr] = item.action
+        self.next_obs[self.ptr] = item.next_obs
+        self.reward[self.ptr] = item.reward
+        self.not_done[self.ptr] = item.not_done
 
         self.ptr = (self.ptr + 1) % self.max_size
         self.size = min(self.size + 1, self.max_size)
 
-    def sample(self, batch_size: int, rng: jnp.ndarray) -> Sample:
+    def sample(self, batch_size: int, rng: jnp.ndarray) -> BufferItem:
         """Given a JAX PRNG key, sample batch from memory."""
         ind = jax.random.randint(rng, (batch_size,), 0, self.size)
 
-        return Sample(
+        return BufferItem(
             self.obs[ind],
             self.action[ind],
             self.next_obs[ind],

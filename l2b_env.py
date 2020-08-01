@@ -5,6 +5,7 @@ import gym
 import jax
 import numpy as np
 
+from replay_buffer import ReplayBuffer
 from trainer import Trainer
 
 
@@ -46,6 +47,11 @@ class L2bEnv(Trainer, gym.Env):
 
     def _generator(self, rng,) -> Generator:
         replay_buffer, loop = self.init(rng)
+        term_replay_buffer = ReplayBuffer(
+            self.env.observation_space.shape,
+            self.env.action_space.shape,
+            max_size=self.replay_size,
+        )
         params = next(loop.train)
         s = next(loop.env)
         for i in itertools.count():

@@ -21,7 +21,7 @@ from ray import tune
 
 from agent import Agent
 from args import add_arguments
-from replay_buffer import ReplayBuffer
+from replay_buffer import ReplayBuffer, BufferItem
 
 OptState = Any
 
@@ -134,20 +134,17 @@ class Trainer:
         else:
             pprint(kwargs)
 
-    def env_loop(
-        self, env=None, replay_buffer=None
-    ) -> Generator[jnp.ndarray, jnp.ndarray, None]:
+    def env_loop(self, env=None) -> Generator[jnp.ndarray, jnp.ndarray, None]:
         env = env or self.env
         obs, done = env.reset(), False
         episode_reward = 0
         episode_timesteps = 0
         episode_num = 0
+        action = yield obs
 
         for t in range(int(self.max_timesteps)):
 
             episode_timesteps += 1
-
-            action = yield obs
 
             # Perform action
             next_obs, reward, done, _ = env.step(action)
@@ -157,9 +154,13 @@ class Trainer:
             steps = env._max_episode_steps
             done_bool = float(done) if episode_timesteps < steps else 0
 
-            # Store data in replay buffer
-            if replay_buffer:
-                replay_buffer.add(obs, action, next_obs, reward, done_bool)
+            action = yield BufferItem(
+                obs=obs,
+                action=action,
+                next_obs=next_obs,
+                reward=reward,
+                not_done=1 - done_bool,
+            )
 
             obs = next_obs
             episode_reward += reward
@@ -189,7 +190,7 @@ class Trainer:
     def train(self):
         rng = jax.random.PRNGKey(self.seed)
         replay_buffer, loop = self.init(rng)
-        obs = next(loop.env)
+        next(loop.env)
         params = next(loop.train)
 
         # Evaluate untrained policy.
@@ -199,19 +200,22 @@ class Trainer:
         best_actor_params = params
         # if save_model: agent.save(f"./models/{policy}/{file_name}")
 
-        for _ in range(self.start_timesteps):
-            obs = loop.env.send(self.env.action_space.sample())
-        for t in itertools.count(self.start_timesteps):
-            # Select action randomly or according to policy
-            rng, noise_rng = jax.random.split(rng)
-            action = self.act(params, obs, noise_rng)
-            try:
-                obs = loop.env.send(action)
+        item = loop.env.send(self.env.action_space.sample())
+        for t in itertools.count():
+            replay_buffer.add(item)
+            if t <= self.start_timesteps:
+                action = self.env.action_space.sample()
+            else:
+                # Select action randomly or according to policy
+                rng, noise_rng = jax.random.split(rng)
+                action = self.act(params, item.obs, noise_rng)
 
                 # Train agent after collecting sufficient data
                 rng, update_rng = jax.random.split(rng)
                 sample = replay_buffer.sample(self.batch_size, rng)
                 params = loop.train.send(sample)
+            try:
+                item = loop.env.send(action)
 
             except StopIteration:
                 self.report(final_reward=self.eval_policy(params))
@@ -237,7 +241,7 @@ class Trainer:
             self.env.action_space.shape,
             max_size=self.replay_size,
         )
-        env_loop = self.env_loop(replay_buffer=replay_buffer)
+        env_loop = self.env_loop()
         train_loop = self.agent.train_loop(
             rng, sample_obs=self.env.observation_space.sample()
         )
