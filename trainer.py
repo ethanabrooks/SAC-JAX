@@ -200,22 +200,22 @@ class Trainer:
         best_actor_params = params
         # if save_model: agent.save(f"./models/{policy}/{file_name}")
 
-        item = loop.env.send(self.env.action_space.sample())
+        step = loop.env.send(self.env.action_space.sample())
         for t in itertools.count():
-            replay_buffer.add(item)
+            replay_buffer.add(step)
             if t <= self.start_timesteps:
                 action = self.env.action_space.sample()
             else:
                 # Select action randomly or according to policy
                 rng, noise_rng = jax.random.split(rng)
-                action = self.act(params, item.obs, noise_rng)
+                action = self.act(params, step.obs, noise_rng)
 
                 # Train agent after collecting sufficient data
                 rng, update_rng = jax.random.split(rng)
                 sample = replay_buffer.sample(self.batch_size, rng)
                 params = loop.train.send(sample)
             try:
-                item = loop.env.send(action)
+                step = loop.env.send(action)
 
             except StopIteration:
                 self.report(final_reward=self.eval_policy(params))
