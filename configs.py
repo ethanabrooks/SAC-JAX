@@ -41,19 +41,20 @@ pendulum = {
 }
 
 debug = {
-    "batch_size": 512,
+    "batch_size": 64,
     "discount": 0.99,
+    "env_id": "Pendulum-v0",
     "eval_freq": 5000.0,
     "expl_noise": 0.01,
-    "lr": 0.005,
-    "max_timesteps": 600,
-    "noise_clip": 0.01,
+    "lr": 0.0003,
+    "max_timesteps": 200,
+    "noise_clip": 0.5,
     "policy": "TD3",
     "policy_freq": 1,
     "policy_noise": 0.2,
     "replay_size": 200000,
-    "seed": 16,
-    "start_timesteps": 10,
+    "seed": 15,
+    "start_timesteps": 5,
 }
 
 
