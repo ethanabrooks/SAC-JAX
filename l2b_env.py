@@ -5,6 +5,7 @@ import gym
 import jax
 import numpy as np
 
+from debug_env import DebugEnv
 from trainer import Trainer
 
 
@@ -56,6 +57,9 @@ class L2bEnv(Trainer, gym.Env):
             (self.context_length, 1),
         )
         return gym.spaces.Box(low=low, high=high)
+
+    def make_env(self):
+        return DebugEnv()
 
     def step(self, action):
         return self.iterator.send(action)
