@@ -61,16 +61,17 @@ class Trainer:
         self.replay_size = int(replay_size)
         self.env_id = env_id
         self.eval_episodes = int(eval_episodes)
-        self.seed = int(seed)
         self.policy = policy
+        seed = int(seed)
+        self.rng = jax.random.PRNGKey(seed)
 
-        self.report(policy=policy, env=env_id, seed=self.seed)
+        self.report(policy=policy, env=env_id, seed=seed)
 
         # if save_model and not os.path.exists("./models/" + policy):
         #     os.makedirs("./models/" + policy)
 
         self.env = self.make_env()
-        self.env.seed(self.seed)
+        self.env.seed(seed)
         self.max_action = float(self.env.action_space.high[0])
         self.action_dim = int(np.prod(self.env.action_space.shape))
         self.obs_dim = int(np.prod(self.env.action_space.shape))
@@ -188,7 +189,7 @@ class Trainer:
         ).clip(-self.max_action, self.max_action)
 
     def train(self):
-        rng = jax.random.PRNGKey(self.seed)
+        rng = self.rng
         replay_buffer, loop = self.init(rng)
         next(loop.env)
         params = next(loop.train)
@@ -235,12 +236,15 @@ class Trainer:
         evaluations.append(self.eval_policy(params))
         print(f"Selected policy has an average score of: {evaluations[-1]:.3f}")
 
-    def init(self, rng):
-        replay_buffer = ReplayBuffer(
+    def build_replay_buffer(self):
+        return ReplayBuffer(
             self.env.observation_space.shape,
             self.env.action_space.shape,
             max_size=self.replay_size,
         )
+
+    def init(self, rng):
+        replay_buffer = self.build_replay_buffer()
         env_loop = self.env_loop()
         train_loop = self.agent.train_loop(
             rng, sample_obs=self.env.observation_space.sample()

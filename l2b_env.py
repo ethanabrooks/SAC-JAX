@@ -5,29 +5,32 @@ import gym
 import jax
 import numpy as np
 
-from replay_buffer import ReplayBuffer
 from trainer import Trainer
 
 
 class L2bEnv(Trainer, gym.Env):
-    def __init__(self, update_freq, steps_per_update, context_length):
-        super().__init__()
+    def __init__(self, update_freq, steps_per_update, context_length, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.update_freq = update_freq
         self.steps_per_update = steps_per_update
         self.context_length = context_length
         self.iterator = None
-        self.rng = jax.random.PRNGKey(self.seed)
         self.observation_space = gym.spaces.Tuple(
             [self.env.observation_space, self.get_context_space()]
         )
         self.action_space = self.env.action_space
+        self.rng = None
+
+    def seed(self, seed=None):
+        seed = seed or 0
+        self.rng = jax.random.PRNGKey(seed)
 
     def get_context_space(self):
         obs = self.env.observation_space
         act = self.env.action_space
         assert isinstance(obs, gym.spaces.Box)
         low = np.tile(
-            np.concatenate([obs.low, act.low, obs.low] * self.context_length, axis=-1),
+            np.concatenate([obs.low, act.low, obs.low], axis=-1),
             (self.context_length, 1),
         )
         high = np.tile(
@@ -47,11 +50,6 @@ class L2bEnv(Trainer, gym.Env):
 
     def _generator(self, rng,) -> Generator:
         replay_buffer, loop = self.init(rng)
-        term_replay_buffer = ReplayBuffer(
-            self.env.observation_space.shape,
-            self.env.action_space.shape,
-            max_size=self.replay_size,
-        )
         params = next(loop.train)
         s = next(loop.env)
         for i in itertools.count():
@@ -59,7 +57,12 @@ class L2bEnv(Trainer, gym.Env):
             r = self.eval_policy(params) if t else 0
             c = self.get_context(params)
             action = yield (s, c), r, t, {}
-            s = loop.env.send(action)
+            action = self.act(
+                params, s, rng
+            )  # TODO: this is just a debugging sanity check
+            step = loop.env.send(action)
+            replay_buffer.add(step)
+            s = step.obs
             if i > self.start_timesteps and i % self.update_freq == 0:
                 for _ in range(self.steps_per_update * self.agent.policy_freq):
                     rng, update_rng = jax.random.split(rng)
