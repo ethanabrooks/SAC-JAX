@@ -4,7 +4,7 @@ import re
 import jax
 
 from args import add_arguments
-from l2b_env import L2bEnv
+from l2b_env import L2bEnv, CatObsSpace
 from replay_buffer import ReplayBuffer, BufferItem
 from trainer import Trainer
 
@@ -56,14 +56,15 @@ class OuterTrainer(Trainer):
             )
 
             def make_env():
-                env = L2bEnv(
-                    **dict(get_args(outer)),
-                    update_freq=update_freq,
-                    use_tune=use_tune,
-                    steps_per_update=steps_per_update,
-                    context_length=context_length,
+                return CatObsSpace(
+                    L2bEnv(
+                        **dict(get_args(outer)),
+                        update_freq=update_freq,
+                        use_tune=use_tune,
+                        steps_per_update=steps_per_update,
+                        context_length=context_length,
+                    )
                 )
-                return env
 
             cls(make_env=make_env, **trainer_args).train()
 

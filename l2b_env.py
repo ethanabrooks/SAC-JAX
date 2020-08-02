@@ -8,6 +8,23 @@ import numpy as np
 from trainer import Trainer
 
 
+class CatObsSpace(gym.ObservationWrapper):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        assert isinstance(self.observation_space, gym.spaces.Tuple)
+        self.observation_space = gym.spaces.Box(
+            low=np.concatenate(
+                [space.low.flatten() for space in self.observation_space.spaces]
+            ),
+            high=np.concatenate(
+                [space.high.flatten() for space in self.observation_space.spaces]
+            ),
+        )
+
+    def observation(self, observation):
+        return np.concatenate([o.flatten() for o in observation])
+
+
 class L2bEnv(Trainer, gym.Env):
     def __init__(self, update_freq, steps_per_update, context_length, *args, **kwargs):
         super().__init__(*args, **kwargs)
