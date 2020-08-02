@@ -88,5 +88,6 @@ def get_config(name):
         with path.open() as f:
             config = json.load(f)
             del config["use_tune"]
+            del config["max_timesteps"]
             return config
     eval(name)
