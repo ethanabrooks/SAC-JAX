@@ -39,6 +39,22 @@ pendulum = {
     "start_timesteps": 5,
 }
 
+debug = {
+    "batch_size": 512,
+    "discount": 0.99,
+    "eval_freq": 5000.0,
+    "expl_noise": 0.01,
+    "lr": 0.005,
+    "max_timesteps": 600,
+    "noise_clip": 0.01,
+    "policy": "TD3",
+    "policy_freq": 1,
+    "policy_noise": 0.2,
+    "replay_size": 200000,
+    "seed": 16,
+    "start_timesteps": 10,
+}
+
 
 def copy_args(d, prefix):
     for k, v in d.items():
