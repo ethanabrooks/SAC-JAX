@@ -26,7 +26,7 @@ class DebugEnv(gym.Env):
     def generator(self):
         s = np.zeros(1)
         action = yield s, 0, False, {}
-        r = -abs(action - self.acceptable)
+        r = -abs(action.item() - self.acceptable)
         yield s, r, True, {}
         # t = False
         # r = 1 / len(self.embeddings)
