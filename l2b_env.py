@@ -24,7 +24,7 @@ class CatObsSpace(gym.ObservationWrapper):
 
     def observation(self, observation):
         s = np.concatenate([o.flatten() for o in observation])
-        assert self.observation_space.contains(s)
+        # assert self.observation_space.contains(s)
         return s
 
 
