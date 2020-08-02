@@ -45,7 +45,7 @@ class OuterTrainer(Trainer):
     @classmethod
     def run(cls, config: dict):
         def run(
-            sample_done_prob, use_tune, update_freq, context_length, env_id, **kwargs
+            context_length, env_id, sample_done_prob, update_freq, use_tune, **kwargs
         ):
             inner = re.compile(r"^inner_(.*)")
             outer = re.compile(r"^outer_(.*)")
