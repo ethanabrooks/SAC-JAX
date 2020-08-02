@@ -13,6 +13,7 @@ import jax.numpy as jnp
 import numpy as np
 import ray
 from gym.envs.classic_control import PendulumEnv
+from gym.wrappers import TimeLimit
 from ray import tune
 from ray.tune.suggest.hyperopt import HyperOptSearch
 
@@ -250,7 +251,7 @@ class Trainer:
         return replay_buffer, Loops(train=train_loop, env=env_loop)
 
     def make_env(self):
-        return DebugEnv()  # TODO: gym.make(self.env_id)
+        return TimeLimit(DebugEnv(), max_episode_steps=2)  # TODO: gym.make(self.env_id)
 
     def eval_policy(self, params) -> float:
         eval_env = self.make_env()

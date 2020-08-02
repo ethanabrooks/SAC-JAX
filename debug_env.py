@@ -17,12 +17,14 @@ class DebugEnv(gym.Env):
         self.acceptable = np.random.random()
         self.iterator = None
         self.random, _ = np_random(0)
+        self.observation_space = gym.spaces.Box(low=np.zeros(1), high=np.zeros(1))
+        self.action_space = gym.spaces.Box(low=np.zeros(1), high=np.ones(1))
 
     def seed(self, seed=None):
         self.random, _ = np_random(seed)
 
     def generator(self):
-        s = [0]
+        s = np.zeros(1)
         action = yield s, 0, False, {}
         r = -abs(action - self.acceptable)
         yield s, r, True, {}
