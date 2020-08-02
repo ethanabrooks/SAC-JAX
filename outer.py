@@ -18,7 +18,7 @@ class DoubleReplayBuffer(ReplayBuffer):
 
     def add(self, item: BufferItem) -> None:
         if item.not_done:
-            self.add(item)
+            super().add(item)
         else:
             self.done_buffer.add(item)
 
