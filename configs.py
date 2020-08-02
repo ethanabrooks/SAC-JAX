@@ -42,12 +42,15 @@ pendulum = {
 double_search = dict(
     max_timesteps=hp.choice("max_timesteps", big_values(3, 5)),
     **search,
-    **{"outer_" + k: v for k, v in search.items()}
+    **{"outer_" + k: v for k, v in search.items()},
 )
 double_search.update(start_timesteps=0, outer_start_timesteps=1)
 
 # TODO
 double = dict(
     **{"outer_" + k: v for k, v in pendulum.items()},
-    **{"inner_" + k: v for k, v in pendulum.items()}
+    **{"inner_" + k: v for k, v in pendulum.items()},
+    update_freq=10,
+    steps_per_update=10,
+    context_length=200,
 )

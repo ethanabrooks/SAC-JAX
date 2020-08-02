@@ -72,10 +72,10 @@ class L2bEnv(Trainer, gym.Env):
         replay_buffer, loop = self.init(rng)
         params = next(loop.train)
         s = next(loop.env)
+        c = np.stack(list(self.get_context(params)))
         for i in itertools.count():
             t = i == self.max_timesteps
             r = self.eval_policy(params) if t else 0
-            c = np.stack(list(self.get_context(params)))
 
             action = yield (s, c), r, t, {}
             action = self.act(
@@ -89,6 +89,8 @@ class L2bEnv(Trainer, gym.Env):
                     rng, update_rng = jax.random.split(rng)
                     sample = replay_buffer.sample(self.batch_size, rng)
                     params = loop.train.send(sample)
+
+                c = np.stack(list(self.get_context(params)))
 
     def get_context(self, params):
         env = self.make_env()

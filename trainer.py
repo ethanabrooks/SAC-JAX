@@ -165,10 +165,6 @@ class Trainer:
             episode_reward += reward
 
             if done:
-                if not isinstance(self.env, PendulumEnv):
-                    import ipdb
-
-                    ipdb.set_trace()
                 # +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
                 self.report(
                     timestep=t + 1,
