@@ -88,7 +88,7 @@ class Trainer:
 
     @classmethod
     def main(cls, config, best, use_tune, num_samples, name, **kwargs):
-        config = getattr(configs, config)
+        config = configs.get_config(config)
         config.update(use_tune=use_tune)
         for k, v in kwargs.items():
             if k not in config:

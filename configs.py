@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 from hyperopt import hp
 
 
@@ -40,23 +43,6 @@ pendulum = {
     "start_timesteps": 10,
 }
 
-debug = {
-    "batch_size": 64,
-    "discount": 0.99,
-    "env_id": "Pendulum-v0",
-    "eval_freq": 5000.0,
-    "expl_noise": 0.01,
-    "lr": 0.0003,
-    "max_timesteps": 200,
-    "noise_clip": 0.5,
-    "policy": "TD3",
-    "policy_freq": 1,
-    "policy_noise": 0.2,
-    "replay_size": 200000,
-    "seed": 15,
-    "start_timesteps": 5,
-}
-
 
 def copy_args(d, prefix):
     for k, v in d.items():
@@ -94,3 +80,13 @@ double = dict(
     update_freq=20,
     context_length=200,
 )
+
+
+def get_config(name):
+    path = Path("configs", name).with_suffix("json")
+    if path.exists():
+        with path.open() as f:
+            config = json.load(f)
+            del config["use_tune"]
+            return config
+    eval(name)
