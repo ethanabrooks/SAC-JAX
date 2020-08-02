@@ -72,13 +72,15 @@ class Trainer:
 
         self.env = self.make_env()
         self.env.seed(seed)
-        self.max_action = float(self.env.action_space.high[0])
+        self.max_action = self.env.action_space.high
+        self.min_action = self.env.action_space.low
         self.action_dim = int(np.prod(self.env.action_space.shape))
         self.obs_dim = int(np.prod(self.env.action_space.shape))
 
         self.agent = Agent(
             policy=policy,
             max_action=self.max_action,
+            min_action=self.min_action,
             action_dim=self.action_dim,
             lr=lr,
             discount=discount,
@@ -183,9 +185,9 @@ class Trainer:
         return (
             self.agent.policy(params, obs)
             + jax.random.normal(rng, (self.action_dim,))
-            * self.max_action
+            * ((self.max_action - self.min_action) / 2)
             * self.expl_noise
-        ).clip(-self.max_action, self.max_action)
+        ).clip(self.min_action, self.max_action)
 
     def train(self):
         rng = self.rng

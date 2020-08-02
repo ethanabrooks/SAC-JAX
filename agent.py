@@ -39,6 +39,7 @@ class Agent(object):
     def __init__(
         self,
         policy: str,
+        min_action: np.array,
         max_action: np.array,
         action_dim: int,
         lr: float,
@@ -47,6 +48,7 @@ class Agent(object):
         policy_noise: float,
         policy_freq: int,
     ):
+        self.min_action = min_action
         self.action_dim = action_dim
         self.max_action = max_action
         self.lr = lr
@@ -61,7 +63,7 @@ class Agent(object):
         self.critic = hk.without_apply_rng(hk.transform(self.critic))
 
     def actor(self, x):
-        return Actor(self.action_dim, self.max_action)(x)
+        return Actor(self.action_dim, self.min_action, self.max_action)(x)
 
     @staticmethod
     def critic(x, a):
@@ -158,7 +160,7 @@ class Agent(object):
 
         # Make sure the noisy action is within the valid bounds.
         next_action = (self.actor.apply(target_actor_params, next_obs) + noise).clip(
-            -self.max_action, self.max_action
+            self.min_action, self.max_action
         )
 
         next_q_1, next_q_2 = self.critic.apply(

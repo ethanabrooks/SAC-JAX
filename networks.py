@@ -1,21 +1,26 @@
-from typing import Any, Tuple
+from typing import Tuple, Union
+
 import haiku as hk
 import jax
-from jax import numpy as jnp
 import numpy as np
+from jax import numpy as jnp
+from jax.nn import sigmoid
 
 """
     Actor and Critic networks defined as in the TD3 paper (Fujimoto et. al.) https://arxiv.org/abs/1802.09477
 """
 
+T = Union[np.ndarray, jnp.DeviceArray]
+
 
 class Actor(hk.Module):
-    def __init__(self, action_dim: int, max_action: np.array):
+    def __init__(self, action_dim: int, min_action: T, max_action: T):
         super(Actor, self).__init__()
         self.action_dim = action_dim
+        self.min_action = min_action
         self.max_action = max_action
 
-    def __call__(self, obs: np.ndarray) -> jnp.DeviceArray:
+    def __call__(self, obs: T) -> jnp.DeviceArray:
         actor_net = hk.Sequential(
             [
                 hk.Flatten(),
@@ -41,16 +46,17 @@ class Actor(hk.Module):
                 ),
             ]
         )
-        return jnp.tanh(actor_net(obs)) * self.max_action
+        return (
+            sigmoid(actor_net(obs)) * (self.max_action - self.min_action)
+            + self.min_action
+        )
 
 
 class Critic(hk.Module):
     def __init__(self):
         super(Critic, self).__init__()
 
-    def __call__(
-        self, obs: np.ndarray, action: np.ndarray
-    ) -> Tuple[jnp.DeviceArray, jnp.DeviceArray]:
+    def __call__(self, obs: T, action: T) -> Tuple[jnp.DeviceArray, jnp.DeviceArray]:
         obs_action = jnp.concatenate((obs, action), -1)
 
         def critic_net():

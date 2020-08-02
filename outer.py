@@ -1,5 +1,6 @@
 import argparse
 import re
+import numpy as np
 
 import jax
 from gym.wrappers import TimeLimit
