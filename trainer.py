@@ -1,24 +1,22 @@
 """
     Credits: https://github.com/sfujim/TD3
 """
-from pprint import pprint
-
-import numpy as np
-
 import argparse
 import itertools
 from dataclasses import dataclass
+from pprint import pprint
 from typing import Any, Generator
 
 import gym
 import jax
 import jax.numpy as jnp
+import numpy as np
+import ray
+from gym.envs.classic_control import PendulumEnv
+from ray import tune
 from ray.tune.suggest.hyperopt import HyperOptSearch
 
 import configs
-import ray
-from ray import tune
-
 from agent import Agent
 from args import add_arguments
 from replay_buffer import ReplayBuffer, BufferItem
@@ -167,6 +165,10 @@ class Trainer:
             episode_reward += reward
 
             if done:
+                if not isinstance(self.env, PendulumEnv):
+                    import ipdb
+
+                    ipdb.set_trace()
                 # +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
                 self.report(
                     timestep=t + 1,
