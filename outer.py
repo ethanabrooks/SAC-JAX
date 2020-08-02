@@ -37,7 +37,7 @@ class OuterTrainer(Trainer):
         self.sample_done_prob = sample_done_prob
         self._make_env = make_env
         self._build_agent = build_agent
-        super().__init__(**trainer_args, env_id=None)
+        super().__init__(**trainer_args)
 
     def report(self, **kwargs):
         super().report(**{"outer_" + k: v for k, v in kwargs.items()})
