@@ -19,6 +19,7 @@ from ray.tune.suggest.hyperopt import HyperOptSearch
 import configs
 from agent import Agent
 from args import add_arguments
+from debug_env import DebugEnv
 from replay_buffer import ReplayBuffer, BufferItem
 
 OptState = Any
@@ -249,7 +250,7 @@ class Trainer:
         return replay_buffer, Loops(train=train_loop, env=env_loop)
 
     def make_env(self):
-        return gym.make(self.env_id)
+        return DebugEnv()  # TODO: gym.make(self.env_id)
 
     def eval_policy(self, params) -> float:
         eval_env = self.make_env()
