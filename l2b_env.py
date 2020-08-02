@@ -58,7 +58,7 @@ class L2bEnv(Trainer, gym.Env):
         return gym.spaces.Box(low=low, high=high)
 
     def step(self, action):
-        return next(self.iterator)
+        return self.iterator.send(action)
 
     def reset(self):
         self.rng, rng = jax.random.split(self.rng)
