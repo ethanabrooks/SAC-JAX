@@ -39,19 +39,40 @@ pendulum = {
     "start_timesteps": 5,
 }
 
+
+def copy_args(d, prefix):
+    for k, v in d.items():
+        yield prefix + k, v
+
+
 double_search = dict(
     max_timesteps=hp.choice("max_timesteps", big_values(3, 5)),
     update_freq=hp.choice("update_freq", [10, 20, 30, 40, 50]),
     context_length=hp.choice("context_length", [10, 50, 100, 200]),
-    **{"inner_" + k: v for k, v in search.items()},
-    **{"outer_" + k: v for k, v in search.items()},
+    **dict(copy_args(search, "inner_")),
+    **dict(copy_args(search, "outer_")),
 )
-double_search.update(start_timesteps=0, outer_start_timesteps=1)
+
+# TODO
+single = {
+    "batch_size": 128,
+    "discount": 0.99,
+    "eval_freq": 5000.0,
+    "expl_noise": 0.5,
+    "lr": 0.0005,
+    "noise_clip": 0.1,
+    "policy": "TD3",
+    "policy_freq": 1,
+    "policy_noise": 0.2,
+    "replay_size": 200000,
+    "seed": 8,
+    "start_timesteps": 5,
+}
 
 # TODO
 double = dict(
-    **{"outer_" + k: v for k, v in pendulum.items()},
-    **{"inner_" + k: v for k, v in pendulum.items()},
+    **dict(copy_args(single, "outer_")),
+    **dict(copy_args(single, "inner_")),
     update_freq=20,
     context_length=200,
 )
