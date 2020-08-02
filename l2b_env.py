@@ -31,7 +31,6 @@ class CatObsSpace(gym.ObservationWrapper):
 class L2bEnv(Trainer, gym.Env):
     def __init__(self, update_freq, context_length, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._max_episode_steps = self.max_timesteps
         self.update_freq = update_freq
         self.context_length = context_length
         self.iterator = None
@@ -93,8 +92,7 @@ class L2bEnv(Trainer, gym.Env):
                 c = np.stack(list(self.get_context(params)))
 
     def get_context(self, params):
-        env = self.make_env()
-        env_loop = self.env_loop(env)
+        env_loop = self.env_loop(env=self.make_env(), max_timesteps=self.context_length)
         s1 = next(env_loop)
         for _ in range(self.context_length):
             self.rng, noise_rng = jax.random.split(self.rng)

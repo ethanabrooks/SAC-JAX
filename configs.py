@@ -64,6 +64,13 @@ outer_search = dict(
     **dict(copy_args(debug4, "inner_")),
 )
 outer_search.update(inner_max_timesteps=hp.choice("inner_max_timesteps", [500, 1000]),)
+double = dict(
+    **dict(copy_args(single, "outer_")),
+    **dict(copy_args(single, "inner_")),
+    update_freq=20,
+    context_length=200,
+)
+# double.update(inner_max_timesteps=2)
 configs = dict(
     search=search,
     pendulum={
@@ -87,10 +94,5 @@ configs = dict(
     # TODO
     single=single,
     # TODO
-    double=dict(
-        **dict(copy_args(single, "outer_")),
-        **dict(copy_args(single, "inner_")),
-        update_freq=20,
-        context_length=200,
-    ),
+    double=double,
 )

@@ -129,15 +129,18 @@ class Trainer:
         else:
             pprint(kwargs)
 
-    def env_loop(self, env=None) -> Generator[BufferItem, jnp.ndarray, None]:
+    def env_loop(
+        self, env=None, max_timesteps=None
+    ) -> Generator[BufferItem, jnp.ndarray, None]:
         env = env or self.env
+        max_timesteps = max_timesteps or self.max_timesteps
         obs, done = env.reset(), False
         episode_reward = 0
         episode_timesteps = 0
         episode_num = 0
         action = yield obs
 
-        for t in range(int(self.max_timesteps)):
+        for t in range(int(max_timesteps)):
 
             episode_timesteps += 1
             # Perform action
