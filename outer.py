@@ -34,7 +34,7 @@ class OuterTrainer(Trainer):
     def __init__(self, make_env, sample_done_prob, **trainer_args):
         self.sample_done_prob = sample_done_prob
         self._make_env = make_env
-        super().__init__(**trainer_args)
+        super().__init__(**trainer_args, env_id=None)
 
     def report(self, **kwargs):
         super().report(**{"outer_" + k: v for k, v in kwargs.items()})
@@ -47,6 +47,7 @@ class OuterTrainer(Trainer):
             update_freq,
             context_length,
             max_episode_steps,
+            env_id,
             **kwargs
         ):
             inner = re.compile(r"^inner_(.*)")
@@ -58,7 +59,7 @@ class OuterTrainer(Trainer):
                         yield pattern.sub(r"\1", k), v
 
             trainer_args = dict(
-                get_args(inner), sample_done_prob=sample_done_prob, use_tune=use_tune
+                get_args(inner), sample_done_prob=sample_done_prob, use_tune=use_tune,
             )
 
             def make_env():
@@ -69,6 +70,7 @@ class OuterTrainer(Trainer):
                             update_freq=update_freq,
                             use_tune=use_tune,
                             context_length=context_length,
+                            env_id=env_id,
                         )
                     ),
                     max_episode_steps=max_episode_steps,
