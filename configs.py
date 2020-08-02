@@ -4,6 +4,17 @@ from pathlib import Path
 from hyperopt import hp
 
 
+def get_config(name):
+    path = Path("configs", name).with_suffix(".json")
+    if path.exists():
+        with path.open() as f:
+            config = json.load(f)
+            del config["use_tune"]
+            del config["max_timesteps"]
+            return config
+    eval(name)
+
+
 def small_values(start, stop):
     return [j for i in range(start, stop) for j in ((10 ** -i), 5 * (10 ** -i))]
 
@@ -82,14 +93,3 @@ double = dict(
     update_freq=20,
     context_length=200,
 )
-
-
-def get_config(name):
-    path = Path("configs", name).with_suffix(".json")
-    if path.exists():
-        with path.open() as f:
-            config = json.load(f)
-            del config["use_tune"]
-            del config["max_timesteps"]
-            return config
-    eval(name)
