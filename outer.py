@@ -33,20 +33,17 @@ class DoubleReplayBuffer(ReplayBuffer):
 
 
 class OuterTrainer(Trainer):
-    def __init__(self, make_env, build_agent, sample_done_prob, **trainer_args):
+    def __init__(self, sample_done_prob, inner_args, **outer_args):
+        self.inner_args = inner_args
         self.sample_done_prob = sample_done_prob
-        self._make_env = make_env
-        self._build_agent = build_agent
-        super().__init__(**trainer_args)
+        super().__init__(**outer_args)
 
     def report(self, **kwargs):
         super().report(**{"outer_" + k: v for k, v in kwargs.items()})
 
     @classmethod
     def run(cls, config: dict):
-        def run(
-            context_length, env_id, sample_done_prob, update_freq, use_tune, **kwargs
-        ):
+        def run(context_length, sample_done_prob, update_freq, use_tune, **kwargs):
             inner = re.compile(r"^inner_(.*)")
             outer = re.compile(r"^outer_(.*)")
 
@@ -55,27 +52,22 @@ class OuterTrainer(Trainer):
                     if pattern.match(k):
                         yield pattern.sub(r"\1", k), v
 
-            trainer_args = dict(
-                get_args(inner), sample_done_prob=sample_done_prob, use_tune=use_tune,
+            inner_args = dict(
+                get_args(inner),
+                context_length=context_length,
+                env_id=None,
+                update_freq=update_freq,
+                use_tune=use_tune,
+            )
+            outer_args = dict(
+                **dict(get_args(outer)),
+                context_length=context_length,
+                env_id=None,
+                sample_done_prob=sample_done_prob,
+                use_tune=use_tune,
             )
 
-            def make_env():
-                return CatObsSpace(
-                    L2bEnv(
-                        **dict(get_args(outer)),
-                        update_freq=update_freq,
-                        use_tune=use_tune,
-                        context_length=context_length,
-                        env_id=env_id,
-                    )
-                )
-
-            def build_agent(obs_size, **_kwargs):
-                return L2bAgent(
-                    obs_size=obs_size, context_length=context_length, **_kwargs
-                )
-
-            cls(make_env=make_env, build_agent=build_agent, **trainer_args).train()
+            cls(**outer_args, inner_args=inner_args).train()
 
         run(**config)
 
@@ -88,11 +80,17 @@ class OuterTrainer(Trainer):
         )
 
     def make_env(self):
-        return self._make_env()
+        def make_env(max_timesteps, **kwargs):
+            return TimeLimit(
+                CatObsSpace(L2bEnv(**kwargs, max_timesteps=max_timesteps)),
+                max_episode_steps=max_timesteps,
+            )
+
+        return make_env(**self.inner_args)
 
     def build_agent(self, **kwargs):
         obs_size = np.prod(self.env.get_inner_env().observation_space.shape)
-        return self._build_agent(
+        return L2bAgent(
             obs_size=obs_size,
             max_action=self.max_action,
             min_action=self.min_action,
