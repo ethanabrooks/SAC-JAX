@@ -45,12 +45,12 @@ class OuterTrainer(Trainer):
     @classmethod
     def run(cls, config: dict):
         def run(
-            sample_done_prob,
-            use_tune,
-            update_freq,
             context_length,
-            max_episode_steps,
             env_id,
+            max_episode_steps,
+            sample_done_prob,
+            update_freq,
+            use_tune,
             **kwargs
         ):
             inner = re.compile(r"^inner_(.*)")

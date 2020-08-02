@@ -76,9 +76,10 @@ configs = dict(
     },
     debug4=debug4,
     outer_search=dict(
-        max_timesteps=hp.choice("max_timesteps", [500, 1000]),
-        update_freq=hp.choice("update_freq", [10, 20, 30, 40, 50]),
         context_length=hp.choice("context_length", [10, 50, 100, 200]),
+        max_episode_steps=hp.choice("max_timesteps", [500, 1000]),
+        sample_done_prob=hp.choice("sample_done_prob", [0.1, 0.3, 0.5]),
+        update_freq=hp.choice("update_freq", [10, 20, 30, 40, 50]),
         **dict(copy_args(search, "outer_")),
         **dict(copy_args(debug4, "inner_")),
     ),
