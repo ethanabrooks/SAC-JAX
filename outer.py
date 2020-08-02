@@ -34,6 +34,9 @@ class OuterTrainer(Trainer):
         self._make_env = make_env
         super().__init__(**trainer_args)
 
+    def report(self, **kwargs):
+        super().report(**{"outer_" + k: v for k, v in kwargs.items()})
+
     @classmethod
     def run(cls, config: dict):
         def run(
