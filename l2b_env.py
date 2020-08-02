@@ -102,5 +102,8 @@ class L2bEnv(Trainer, gym.Env):
             yield np.concatenate([s1, a, s2], axis=-1)
             s1 = s2
 
+    def get_inner_env(self):
+        return self.env
+
     def render(self, mode="human"):
         pass

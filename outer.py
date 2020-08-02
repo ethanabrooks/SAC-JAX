@@ -6,6 +6,7 @@ import jax
 from gym.wrappers import TimeLimit
 
 from args import add_arguments
+from l2b_agent import L2bAgent
 from l2b_env import L2bEnv, CatObsSpace
 from replay_buffer import ReplayBuffer, BufferItem
 from trainer import Trainer
@@ -32,9 +33,10 @@ class DoubleReplayBuffer(ReplayBuffer):
 
 
 class OuterTrainer(Trainer):
-    def __init__(self, make_env, sample_done_prob, **trainer_args):
+    def __init__(self, make_env, build_agent, sample_done_prob, **trainer_args):
         self.sample_done_prob = sample_done_prob
         self._make_env = make_env
+        self._build_agent = build_agent
         super().__init__(**trainer_args, env_id=None)
 
     def report(self, **kwargs):
@@ -77,7 +79,12 @@ class OuterTrainer(Trainer):
                     max_episode_steps=max_episode_steps,
                 )
 
-            cls(make_env=make_env, **trainer_args).train()
+            def build_agent(obs_size, **_kwargs):
+                return L2bAgent(
+                    obs_size=obs_size, context_length=context_length, **_kwargs
+                )
+
+            cls(make_env=make_env, build_agent=build_agent, **trainer_args).train()
 
         run(**config)
 
@@ -91,6 +98,16 @@ class OuterTrainer(Trainer):
 
     def make_env(self):
         return self._make_env()
+
+    def build_agent(self, **kwargs):
+        obs_size = np.prod(self.env.get_inner_env().observation_space.shape)
+        return self._build_agent(
+            obs_size=obs_size,
+            max_action=self.max_action,
+            min_action=self.min_action,
+            action_dim=self.action_dim,
+            **kwargs,
+        )
 
 
 class DoubleArgumentParser(argparse.ArgumentParser):

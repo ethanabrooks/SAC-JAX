@@ -27,6 +27,7 @@ class DebugEnv(gym.Env):
     def generator(self):
         s = np.zeros(1)
         action = yield s, 0, False, {}
+        assert self.action_space.contains(action)
         r = -abs(action.item() - self.acceptable)
         yield s, r, True, {}
         # t = False
