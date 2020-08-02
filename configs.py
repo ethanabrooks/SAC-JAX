@@ -49,12 +49,14 @@ def copy_args(d, prefix):
         yield prefix + k, v
 
 
-double_search = dict(
-    max_timesteps=hp.choice("max_timesteps", big_values(3, 5)),
+debug4 = get_config("debug4")
+
+outer_search = dict(
+    max_timesteps=hp.choice("max_timesteps", [500, 1000]),
     update_freq=hp.choice("update_freq", [10, 20, 30, 40, 50]),
     context_length=hp.choice("context_length", [10, 50, 100, 200]),
-    **dict(copy_args(search, "inner_")),
     **dict(copy_args(search, "outer_")),
+    **dict(copy_args(debug4, "inner_")),
 )
 
 # TODO
