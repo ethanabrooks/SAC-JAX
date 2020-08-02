@@ -31,6 +31,7 @@ class CatObsSpace(gym.ObservationWrapper):
 class L2bEnv(Trainer, gym.Env):
     def __init__(self, update_freq, context_length, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._max_episode_steps = self.max_timesteps
         self.update_freq = update_freq
         self.context_length = context_length
         self.iterator = None

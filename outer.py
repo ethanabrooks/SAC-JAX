@@ -45,13 +45,7 @@ class OuterTrainer(Trainer):
     @classmethod
     def run(cls, config: dict):
         def run(
-            context_length,
-            env_id,
-            max_episode_steps,
-            sample_done_prob,
-            update_freq,
-            use_tune,
-            **kwargs
+            sample_done_prob, use_tune, update_freq, context_length, env_id, **kwargs
         ):
             inner = re.compile(r"^inner_(.*)")
             outer = re.compile(r"^outer_(.*)")
@@ -66,17 +60,14 @@ class OuterTrainer(Trainer):
             )
 
             def make_env():
-                return TimeLimit(
-                    CatObsSpace(
-                        L2bEnv(
-                            **dict(get_args(outer)),
-                            update_freq=update_freq,
-                            use_tune=use_tune,
-                            context_length=context_length,
-                            env_id=env_id,
-                        )
-                    ),
-                    max_episode_steps=max_episode_steps,
+                return CatObsSpace(
+                    L2bEnv(
+                        **dict(get_args(outer)),
+                        update_freq=update_freq,
+                        use_tune=use_tune,
+                        context_length=context_length,
+                        env_id=env_id,
+                    )
                 )
 
             def build_agent(obs_size, **_kwargs):
