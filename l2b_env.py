@@ -77,9 +77,6 @@ class L2bEnv(Trainer, gym.Env):
             r = self.eval_policy(params) if t else 0
 
             action = yield (s, c), r, t, {}
-            action = self.act(
-                params, s, rng
-            )  # TODO: this is just a debugging sanity check
             step = loop.env.send(action)
             replay_buffer.add(step)
             s = step.obs
