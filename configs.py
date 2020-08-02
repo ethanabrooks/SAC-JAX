@@ -51,6 +51,5 @@ double = dict(
     **{"outer_" + k: v for k, v in pendulum.items()},
     **{"inner_" + k: v for k, v in pendulum.items()},
     update_freq=10,
-    steps_per_update=10,
     context_length=200,
 )

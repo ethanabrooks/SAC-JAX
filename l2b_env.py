@@ -28,10 +28,9 @@ class CatObsSpace(gym.ObservationWrapper):
 
 
 class L2bEnv(Trainer, gym.Env):
-    def __init__(self, update_freq, steps_per_update, context_length, *args, **kwargs):
+    def __init__(self, update_freq, context_length, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.update_freq = update_freq
-        self.steps_per_update = steps_per_update
         self.context_length = context_length
         self.iterator = None
         self.observation_space = gym.spaces.Tuple(
@@ -85,7 +84,7 @@ class L2bEnv(Trainer, gym.Env):
             replay_buffer.add(step)
             s = step.obs
             if i > self.start_timesteps and i % self.update_freq == 0:
-                for _ in range(self.steps_per_update * self.agent.policy_freq):
+                for _ in range(self.update_freq):
                     rng, update_rng = jax.random.split(rng)
                     sample = replay_buffer.sample(self.batch_size, rng=rng)
                     params = loop.train.send(sample)

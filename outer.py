@@ -45,7 +45,6 @@ class OuterTrainer(Trainer):
             sample_done_prob,
             use_tune,
             update_freq,
-            steps_per_update,
             context_length,
             max_episode_steps,
             **kwargs
@@ -69,7 +68,6 @@ class OuterTrainer(Trainer):
                             **dict(get_args(outer)),
                             update_freq=update_freq,
                             use_tune=use_tune,
-                            steps_per_update=steps_per_update,
                             context_length=context_length,
                         )
                     ),
@@ -116,7 +114,6 @@ if __name__ == "__main__":
     PARSER.add_argument("--best", double=False)
     PARSER.add_argument("--sample-done-prob", type=float, default=0.3, double=False)
     PARSER.add_argument("--update-freq", type=int, default=1, double=False)
-    PARSER.add_argument("--steps-per-update", type=int, default=1, double=False)
     PARSER.add_argument("--context-length", type=int, default=100, double=False)
     PARSER.add_argument("--max-episode-steps", type=int, default=10000, double=False)
     add_arguments(PARSER)
