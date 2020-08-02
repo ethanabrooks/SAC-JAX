@@ -245,8 +245,7 @@ class Trainer:
         return replay_buffer, Loops(train=train_loop, env=env_loop)
 
     def make_env(self):
-        return gym.make(self.env_id)
-        # return TimeLimit(DebugEnv(), max_episode_steps=2)
+        return TimeLimit(DebugEnv(), max_episode_steps=2)  # TODO: gym.make(self.env_id)
 
     def eval_policy(self, params) -> float:
         eval_env = self.make_env()
