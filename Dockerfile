@@ -11,6 +11,7 @@ ENV CUDA_VERSION=cuda101
 ENV BASE_URL='https://storage.googleapis.com/jax-releases'
 ENV PLATFORM=manylinux2010_x86_64
 RUN pip install --upgrade $BASE_URL/$CUDA_VERSION/jaxlib-0.1.52-$PYTHON_VERSION-none-$PLATFORM.whl
+RUN pip install ipdb
 
 
 RUN echo "source activate base" >> /root/.bashrc
