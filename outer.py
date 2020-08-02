@@ -23,7 +23,9 @@ class DoubleReplayBuffer(ReplayBuffer):
             self.done_buffer.add(item)
 
     def sample(self, *args, rng, **kwargs) -> BufferItem:
-        if jax.random.choice(rng, 2, p=self.sample_done_prob):
+        if jax.random.choice(
+            rng, 2, p=[1 - self.sample_done_prob, self.sample_done_prob]
+        ):
             return self.done_buffer.sample(*args, rng=rng, **kwargs)
         return super().sample(*args, rng=rng, **kwargs)
 

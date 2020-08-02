@@ -87,7 +87,7 @@ class L2bEnv(Trainer, gym.Env):
             if i > self.start_timesteps and i % self.update_freq == 0:
                 for _ in range(self.steps_per_update * self.agent.policy_freq):
                     rng, update_rng = jax.random.split(rng)
-                    sample = replay_buffer.sample(self.batch_size, rng)
+                    sample = replay_buffer.sample(self.batch_size, rng=rng)
                     params = loop.train.send(sample)
 
                 c = np.stack(list(self.get_context(params)))
