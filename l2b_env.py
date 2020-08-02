@@ -22,7 +22,9 @@ class CatObsSpace(gym.ObservationWrapper):
         )
 
     def observation(self, observation):
-        return np.concatenate([o.flatten() for o in observation])
+        s = np.concatenate([o.flatten() for o in observation])
+        assert self.observation_space.contains(s)
+        return s
 
 
 class L2bEnv(Trainer, gym.Env):
@@ -36,7 +38,7 @@ class L2bEnv(Trainer, gym.Env):
             [self.env.observation_space, self.get_context_space()]
         )
         self.action_space = self.env.action_space
-        self.rng = None
+        self.rng = jax.random.PRNGKey(0)
 
     def seed(self, seed=None):
         seed = seed or 0
@@ -63,6 +65,7 @@ class L2bEnv(Trainer, gym.Env):
         self.rng, rng = jax.random.split(self.rng)
         self.iterator = self._generator(rng)
         s, _, _, _ = next(self.iterator)
+        assert self.observation_space.contains(s)
         return s
 
     def _generator(self, rng,) -> Generator:
@@ -72,7 +75,8 @@ class L2bEnv(Trainer, gym.Env):
         for i in itertools.count():
             t = i == self.max_timesteps
             r = self.eval_policy(params) if t else 0
-            c = self.get_context(params)
+            c = np.stack(list(self.get_context(params)))
+
             action = yield (s, c), r, t, {}
             action = self.act(
                 params, s, rng
@@ -93,7 +97,7 @@ class L2bEnv(Trainer, gym.Env):
         for _ in range(self.context_length):
             self.rng, noise_rng = jax.random.split(self.rng)
             a = self.act(params, s1, noise_rng)
-            s2 = env_loop.send(a)
+            s2 = env_loop.send(a).obs
             yield np.concatenate([s1, a, s2], axis=-1)
             s1 = s2
 

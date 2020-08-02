@@ -135,7 +135,7 @@ class Trainer:
         else:
             pprint(kwargs)
 
-    def env_loop(self, env=None) -> Generator[jnp.ndarray, jnp.ndarray, None]:
+    def env_loop(self, env=None) -> Generator[BufferItem, jnp.ndarray, None]:
         env = env or self.env
         obs, done = env.reset(), False
         episode_reward = 0
@@ -261,6 +261,7 @@ class Trainer:
         for _ in range(self.eval_episodes):
             obs, done = eval_env.reset(), False
             # noinspection PyProtectedMember
+
             remaining_steps = eval_env._max_episode_steps
 
             while not done:

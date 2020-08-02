@@ -2,6 +2,7 @@ import argparse
 import re
 
 import jax
+from gym.wrappers import TimeLimit
 
 from args import add_arguments
 from l2b_env import L2bEnv, CatObsSpace
@@ -41,6 +42,7 @@ class OuterTrainer(Trainer):
             update_freq,
             steps_per_update,
             context_length,
+            max_episode_steps,
             **kwargs
         ):
             inner = re.compile(r"^inner_(.*)")
@@ -56,14 +58,17 @@ class OuterTrainer(Trainer):
             )
 
             def make_env():
-                return CatObsSpace(
-                    L2bEnv(
-                        **dict(get_args(outer)),
-                        update_freq=update_freq,
-                        use_tune=use_tune,
-                        steps_per_update=steps_per_update,
-                        context_length=context_length,
-                    )
+                return TimeLimit(
+                    CatObsSpace(
+                        L2bEnv(
+                            **dict(get_args(outer)),
+                            update_freq=update_freq,
+                            use_tune=use_tune,
+                            steps_per_update=steps_per_update,
+                            context_length=context_length,
+                        )
+                    ),
+                    max_episode_steps=max_episode_steps,
                 )
 
             cls(make_env=make_env, **trainer_args).train()
@@ -108,5 +113,6 @@ if __name__ == "__main__":
     PARSER.add_argument("--update-freq", type=int, default=1, double=False)
     PARSER.add_argument("--steps-per-update", type=int, default=1, double=False)
     PARSER.add_argument("--context-length", type=int, default=100, double=False)
+    PARSER.add_argument("--max-episode-steps", type=int, default=10000, double=False)
     add_arguments(PARSER)
     OuterTrainer.main(**vars(PARSER.parse_args()))
