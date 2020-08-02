@@ -27,7 +27,10 @@ class DebugEnv(gym.Env):
     def generator(self):
         s = np.zeros(1)
         action = yield s, 0, False, {}
-        assert self.action_space.contains(action)
+        # if not self.action_space.contains(action):
+        # import ipdb
+
+        # ipdb.set_trace()
         r = -abs(action.item() - self.acceptable)
         yield s, r, True, {}
         # t = False
