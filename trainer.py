@@ -144,7 +144,6 @@ class Trainer:
         for t in range(int(self.max_timesteps)):
 
             episode_timesteps += 1
-
             # Perform action
             next_obs, reward, done, _ = env.step(action)
             # This 'trick' converts the finite-horizon task into an infinite-horizon one. It does change the problem
@@ -194,9 +193,9 @@ class Trainer:
 
         # Evaluate untrained policy.
         # We evaluate for 100 episodes as 10 episodes provide a very noisy estimation in some domains.
-        evaluations = [self.eval_policy(params)]  # TODO
-        best_performance = evaluations[-1]
-        best_actor_params = params
+        # evaluations = [self.eval_policy(params)]  # TODO
+        # best_performance = evaluations[-1]
+        # best_actor_params = params
         # if save_model: agent.save(f"./models/{policy}/{file_name}")
 
         step = loop.env.send(self.env.action_space.sample())
@@ -221,18 +220,18 @@ class Trainer:
                 return
 
             # Evaluate episode
-            if (t + 1) % self.eval_freq == 0:
-                evaluations.append(self.eval_policy(params))
-                if evaluations[-1] > best_performance:
-                    best_performance = evaluations[-1]
-                    best_actor_params = params
-                    # if save_model: agent.save(f"./models/{policy}/{file_name}")
+            # if (t + 1) % self.eval_freq == 0:
+            # evaluations.append(self.eval_policy(params))
+            # if evaluations[-1] > best_performance:
+            # best_performance = evaluations[-1]
+            # best_actor_params = params
+            # if save_model: agent.save(f"./models/{policy}/{file_name}")
 
         # At the end, re-evaluate the policy which is presumed to be best. This ensures an un-biased estimator when
         # reporting the average best results across each run.
-        params = best_actor_params
-        evaluations.append(self.eval_policy(params))
-        print(f"Selected policy has an average score of: {evaluations[-1]:.3f}")
+        # params = best_actor_params
+        # evaluations.append(self.eval_policy(params))
+        # print(f"Selected policy has an average score of: {evaluations[-1]:.3f}")
 
     def build_replay_buffer(self):
         return ReplayBuffer(
