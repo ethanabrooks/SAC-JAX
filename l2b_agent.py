@@ -34,14 +34,14 @@ class ContextEncoder(hk.Module):
             ]
         )
         d = obs.shape[-1]
-        obs = obs.reshape(-1, d)
-        n = obs.shape[0]
-        s, c = jnp.hsplit(obs, [self.obs_size])
+        unsqueeze = obs.reshape(-1, d)
+        n = unsqueeze.shape[0]
+        s, c = jnp.hsplit(unsqueeze, [self.obs_size])
         c = c.reshape(n, self.context_length, -1)
         e = encoder(c)
         e = e.prod(axis=1)
-        obs = jnp.concatenate([s, e], axis=-1)
-        return obs.squeeze(0)
+        se = jnp.concatenate([s, e], axis=-1)
+        return se.reshape(*obs.shape[:-1], -1)
 
 
 class Actor(networks.Actor):
