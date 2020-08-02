@@ -12,7 +12,6 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import ray
-from gym.envs.classic_control import PendulumEnv
 from gym.wrappers import TimeLimit
 from ray import tune
 from ray.tune.suggest.hyperopt import HyperOptSearch
@@ -36,21 +35,17 @@ class Trainer:
     def __init__(
         self,
         batch_size,
-        discount,
         env_id,
         eval_freq,
         expl_noise,
-        lr,
         max_timesteps,
-        noise_clip,
         policy,
-        policy_freq,
-        policy_noise,
         replay_size,
         seed,
         start_timesteps,
         use_tune,
         eval_episodes=100,
+        **kwargs,
     ):
         self.use_tune = use_tune
         self.expl_noise = expl_noise
@@ -76,17 +71,14 @@ class Trainer:
         self.min_action = self.env.action_space.low
         self.action_dim = int(np.prod(self.env.action_space.shape))
         self.obs_dim = int(np.prod(self.env.action_space.shape))
+        self.agent = self.build_agent(**kwargs, policy=policy)
 
-        self.agent = Agent(
-            policy=policy,
+    def build_agent(self, **kwargs):
+        return Agent(
             max_action=self.max_action,
             min_action=self.min_action,
             action_dim=self.action_dim,
-            lr=lr,
-            discount=discount,
-            noise_clip=noise_clip,
-            policy_noise=policy_noise,
-            policy_freq=policy_freq,
+            **kwargs,
         )
 
     @classmethod
