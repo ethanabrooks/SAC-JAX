@@ -157,7 +157,10 @@ class Trainer:
             # we are solving, however it has been observed empirically to work pretty well. noinspection
             # noinspection PyProtectedMember
             steps = env._max_episode_steps
-            done_bool = float(done) if episode_timesteps < steps else 0
+            if episode_timesteps < steps:
+                done_bool = float(done)
+            else:
+                done_bool = 0
 
             action = yield Step(
                 obs=obs,
