@@ -56,14 +56,14 @@ single = {
     "seed": 8,
     "start_timesteps": 5,
 }
-outer_search = dict(
+l2b_search = dict(
     context_length=hp.choice("context_length", [10, 50, 100, 200]),
     sample_done_prob=hp.choice("sample_done_prob", [0.1, 0.3, 0.5]),
     update_freq=hp.choice("update_freq", [10, 20, 30, 40, 50]),
     **dict(copy_args(search, "outer_")),
     **dict(copy_args(debug4, "inner_")),
 )
-outer_search.update(inner_max_timesteps=hp.choice("inner_max_timesteps", [500, 1000]),)
+l2b_search.update(inner_max_timesteps=hp.choice("inner_max_timesteps", [500, 1000]),)
 double = dict(
     **dict(copy_args(single, "outer_")),
     **dict(copy_args(single, "inner_")),
@@ -90,7 +90,7 @@ configs = dict(
         "start_timesteps": 10,
     },
     debug4=debug4,
-    outer_search=outer_search,
+    l2b_search=l2b_search,
     # TODO
     single=single,
     # TODO

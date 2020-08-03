@@ -89,6 +89,7 @@ class L2bEnv(Trainer, gym.Env):
         params = next(loop.train)
         s = next(loop.env)
         c = np.stack(list(self.get_context(params)))
+        r = 0
         for i in itertools.count():
             t = i == self.max_timesteps
             # r = self.eval_policy(params) if t else 0
