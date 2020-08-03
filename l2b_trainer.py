@@ -1,12 +1,12 @@
 import argparse
 import re
-import numpy as np
 
+import numpy as np
 from gym.wrappers import TimeLimit
 
+from agent import Agent
 from args import add_arguments
-from l2b_agent import L2bAgent
-from l2b_env import L2bEnv, CatObsSpace, DoubleReplayBuffer
+from l2b_env import L2bEnv, DoubleReplayBuffer
 from trainer import Trainer
 
 
@@ -49,16 +49,21 @@ class L2bTrainer(Trainer):
     def make_env(self):
         def make_env(max_timesteps, **kwargs):
             return TimeLimit(
-                CatObsSpace(L2bEnv(**kwargs, max_timesteps=max_timesteps)),
+                # CatObsSpace(
+                L2bEnv(
+                    **kwargs,
+                    max_timesteps=max_timesteps
+                    # )
+                ),
                 max_episode_steps=max_timesteps,
             )
 
         return make_env(**self.inner_args)
 
-    def build_agent(self, **kwargs):
+    def build_agent(self, context_length, **kwargs):
         obs_size = np.prod(self.env.get_inner_env().observation_space.shape)
-        return L2bAgent(
-            obs_size=obs_size,
+        return Agent(
+            # obs_size=obs_size,
             max_action=self.max_action,
             min_action=self.min_action,
             action_dim=self.action_dim,
