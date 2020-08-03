@@ -119,7 +119,7 @@ class L2bEnv(Trainer, gym.Env):
             if step.done:
                 # +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
                 self.report(
-                    timestep=t + 1,
+                    timestep=i + 1,
                     episode=episode_num + 1,
                     episode_timestep=episode_timesteps,
                     reward=episode_reward,
