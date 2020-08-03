@@ -3,10 +3,11 @@ from typing import Generator
 
 import gym
 import jax
+import jax.numpy as jnp
 import numpy as np
 
 from debug_env import DebugEnv
-from replay_buffer import ReplayBuffer, Sample
+from replay_buffer import ReplayBuffer, Sample, Step
 from trainer import Trainer, Loops
 
 
@@ -98,13 +99,7 @@ class L2bEnv(Trainer, gym.Env):
             action = yield (s, c), r, t, {}
             step = loop.env.send(action)
             r = self.eval_policy(params) if t else step.reward  # TODO
-            self.replay_buffer.add(
-                obs=step.obs,
-                action=step.action,
-                next_obs=step.next_obs,
-                reward=step.reward,
-                not_done=1 - float(step.done),
-            )
+            self.replay_buffer.add(step)
             s = step.obs
             if i % self.update_freq == 0 and self.replay_buffer.size > self.batch_size:
                 for _ in range(self.update_freq):
@@ -159,15 +154,15 @@ class DoubleReplayBuffer(ReplayBuffer):
         self.sample_done_prob = sample_done_prob
         self.done_buffer = ReplayBuffer(**kwargs)
 
-    def add(self, sample: Sample) -> None:
-        if sample.done:
-            self.done_buffer.add(sample)
+    def add(self, step: Step) -> None:
+        if step.done:
+            self.done_buffer.add(step)
         else:
-            super().add(sample)
+            super().add(step)
 
-    def sample(self, batch_size, rng) -> Sample:
-        if self.done_buffer.size >= batch_size and jax.random.choice(
+    def sample(self, batch_size: int, rng: jnp.ndarray) -> Sample:
+        if jax.random.choice(
             rng, 2, p=[1 - self.sample_done_prob, self.sample_done_prob]
         ):
-            return self.done_buffer.sample(batch_size=batch_size, rng=rng)
-        return super().sample(batch_size=batch_size, rng=rng)
+            return self.done_buffer.sample(batch_size, rng)
+        return super().sample(batch_size, rng)
