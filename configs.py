@@ -56,14 +56,25 @@ single = {
     "seed": 8,
     "start_timesteps": 5,
 }
+outer_search = dict(
+    batch_size=hp.choice("batch_size", medium_values(7, 9)),
+    expl_noise=hp.choice("expl_noise", small_values(1, 3)),
+    noise_clip=hp.choice("noise_clip", small_values(1, 3)),
+    lr=hp.choice("lr", small_values(1, 2)),
+    policy_freq=hp.choice("policy_freq", [1, 2]),
+    seed=hp.randint("seed", 20),
+    start_timesteps=hp.choice("start_timesteps", 1),
+)
 l2b_search = dict(
-    context_length=hp.choice("context_length", [10, 50, 100, 200]),
+    context_length=hp.choice("context_length", [40, 50, 60]),
     sample_done_prob=hp.choice("sample_done_prob", [0.1, 0.3, 0.5]),
-    update_freq=hp.choice("update_freq", [10, 20, 30, 40, 50]),
+    update_freq=hp.choice("update_freq", [40, 50, 75, 100]),
     **dict(copy_args(search, "outer_")),
     **dict(copy_args(debug4, "inner_")),
 )
-l2b_search.update(inner_max_timesteps=hp.choice("inner_max_timesteps", [500, 1000]),)
+l2b_search.update(
+    inner_max_timesteps=hp.choice("inner_max_timesteps", [500, 1000, 1500])
+)
 double = dict(
     **dict(copy_args(single, "outer_")),
     **dict(copy_args(single, "inner_")),
