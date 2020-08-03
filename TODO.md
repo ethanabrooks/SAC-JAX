@@ -1,0 +1,4 @@
+- get stochastic latent variables (re-param trick)
+- check that `c` is fed correctly into `ContextEncoder`
+- get things working with `DebugEnv`
+- slowly down-weight extrinsic reward.
