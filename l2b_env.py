@@ -81,16 +81,15 @@ class L2bEnv(Trainer, gym.Env):
     def _generator(self, rng,) -> Generator:
         self.replay_buffer.size = 0
         self.replay_buffer.ptr = 0
+        report_loop = self.report_loop()
         loop = Loops(
-            report=self.report_loop(),
-            env=self.env_loop(),
+            env=self.env_loop(report_loop=report_loop),
             train=self.agent.train_loop(
                 rng, sample_obs=self.env.observation_space.sample()
             ),
         )
         params = next(loop.train)
         self.report(new_params=1)
-        next(loop.report)
         s = next(loop.env)
         c = np.stack(list(self.get_context(params)))
         r = 0
@@ -103,7 +102,6 @@ class L2bEnv(Trainer, gym.Env):
             # r = self.eval_policy(params) if t else 0
             action = yield (s, c), r, t, {}
             step = loop.env.send(action)
-            loop.report.send(ReportData(reward=step.reward, done=step.done, t=t))
             r = self.eval_policy(params) if t else step.reward  # TODO
             self.replay_buffer.add(step)
             s = step.obs

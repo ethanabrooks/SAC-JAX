@@ -27,7 +27,6 @@ OptState = Any
 class Loops:
     env: Generator
     train: Generator
-    report: Generator
 
 
 @dataclass
@@ -168,8 +167,10 @@ class Trainer:
                 episode_num += 1
 
     def env_loop(
-        self, env=None, max_timesteps=None
+        self, env=None, max_timesteps=None, report_loop=None
     ) -> Generator[Step, jnp.ndarray, None]:
+        if report_loop:
+            next(report_loop)
         env = env or self.env
         max_timesteps = max_timesteps or self.max_timesteps
         obs, done = env.reset(), False
@@ -181,6 +182,8 @@ class Trainer:
             episode_timesteps += 1
             # Perform action
             next_obs, reward, done, _ = env.step(action)
+            if report_loop:
+                report_loop.send(ReportData(reward=reward, done=done, t=t))
             # This 'trick' converts the finite-horizon task into an infinite-horizon one. It does change the problem
             # we are solving, however it has been observed empirically to work pretty well. noinspection
             # noinspection PyProtectedMember
@@ -211,13 +214,11 @@ class Trainer:
         rng = self.rng
         replay_buffer = self.build_replay_buffer()
         loop = Loops(
-            report=self.report_loop(),
-            env=self.env_loop(),
+            env=self.env_loop(report_loop=self.report_loop()),
             train=self.agent.train_loop(
                 rng, sample_obs=self.env.observation_space.sample()
             ),
         )
-        next(loop.report)
         next(loop.env)
         params = next(loop.train)
 
@@ -243,7 +244,6 @@ class Trainer:
                 sample = replay_buffer.sample(self.batch_size, rng=rng)
                 params = loop.train.send(sample)
             try:
-                loop.report.send(ReportData(reward=step.reward, done=step.done, t=t))
                 step = loop.env.send(action)
 
             except StopIteration:
