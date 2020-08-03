@@ -26,6 +26,16 @@ OptState = Any
 
 
 @dataclass
+class Step:
+    T = np.ndarray
+    obs: T
+    action: T
+    next_obs: T
+    reward: T
+    done: bool
+
+
+@dataclass
 class Loops:
     env: Generator
     train: Generator
