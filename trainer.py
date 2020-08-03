@@ -12,15 +12,13 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import ray
-from gym.wrappers import TimeLimit
 from ray import tune
 from ray.tune.suggest.hyperopt import HyperOptSearch
 
 import configs
 from agent import Agent
 from args import add_arguments
-from debug_env import DebugEnv
-from replay_buffer import ReplayBuffer, Sample
+from replay_buffer import ReplayBuffer
 
 OptState = Any
 
@@ -181,11 +179,7 @@ class Trainer:
 
     def train(self):
         rng = self.rng
-        replay_buffer = ReplayBuffer(
-            self.env.observation_space.shape,
-            self.env.action_space.shape,
-            max_size=self.replay_size,
-        )
+        replay_buffer = self.build_replay_buffer()
         loop = Loops(
             env=self.env_loop(),
             train=self.agent.train_loop(
@@ -260,6 +254,13 @@ class Trainer:
         # params = best_actor_params
         # evaluations.append(self.eval_policy(params))
         # print(f"Selected policy has an average score of: {evaluations[-1]:.3f}")
+
+    def build_replay_buffer(self):
+        return ReplayBuffer(
+            self.env.observation_space.shape,
+            self.env.action_space.shape,
+            max_size=self.replay_size,
+        )
 
     def make_env(self):
         return gym.make(self.env_id)

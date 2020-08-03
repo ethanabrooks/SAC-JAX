@@ -6,12 +6,13 @@ from gym.wrappers import TimeLimit
 
 from args import add_arguments
 from l2b_agent import L2bAgent
-from l2b_env import L2bEnv, CatObsSpace
+from l2b_env import L2bEnv, CatObsSpace, DoubleReplayBuffer
 from trainer import Trainer
 
 
 class L2bTrainer(Trainer):
-    def __init__(self, inner_args, env_id=None, **outer_args):
+    def __init__(self, inner_args, sample_done_prob, env_id=None, **outer_args):
+        self.sample_done_prob = sample_done_prob
         self.inner_args = inner_args
         super().__init__(**outer_args, env_id=env_id)
 
@@ -32,12 +33,12 @@ class L2bTrainer(Trainer):
             inner_args = dict(
                 get_args(inner),
                 context_length=context_length,
-                sample_done_prob=sample_done_prob,
                 update_freq=update_freq,
                 use_tune=use_tune,
             )
             outer_args = dict(
                 **dict(get_args(outer)),
+                sample_done_prob=sample_done_prob,
                 context_length=context_length,
                 use_tune=use_tune,
             )
@@ -62,6 +63,14 @@ class L2bTrainer(Trainer):
             min_action=self.min_action,
             action_dim=self.action_dim,
             **kwargs,
+        )
+
+    def build_replay_buffer(self):
+        return DoubleReplayBuffer(
+            obs_shape=self.env.observation_space.shape,
+            action_shape=self.env.action_space.shape,
+            max_size=self.replay_size,
+            sample_done_prob=self.sample_done_prob,
         )
 
 
