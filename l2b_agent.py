@@ -47,22 +47,26 @@ class ContextEncoder(hk.Module):
 class Actor(networks.Actor):
     def __init__(self, obs_size: int, context_length: int, **kwargs):
         super(Actor, self).__init__(**kwargs)
-        self.encoder = ContextEncoder(obs_size, context_length)
+        self.obs_size = obs_size
+        # self.encoder = ContextEncoder(obs_size, context_length)
 
     def __call__(self, obs: np.ndarray) -> jnp.DeviceArray:
-        obs = self.encoder(obs)
+        obs, _ = jnp.split(obs, [self.obs_size], axis=-1)
+        # obs = self.encoder(obs)
         return super().__call__(obs)
 
 
 class Critic(networks.Critic):
     def __init__(self, obs_size: int, context_length: int):
         super(Critic, self).__init__()
-        self.encoder = ContextEncoder(obs_size, context_length)
+        self.obs_size = obs_size
+        # self.encoder = ContextEncoder(obs_size, context_length)
 
     def __call__(
         self, obs: np.ndarray, action: np.ndarray
     ) -> Tuple[jnp.DeviceArray, jnp.DeviceArray]:
-        obs = self.encoder(obs)
+        # obs = self.encoder(obs)
+        obs, _ = jnp.split(obs, [self.obs_size], axis=-1)
         return super().__call__(obs, action)
 
 

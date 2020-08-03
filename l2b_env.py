@@ -36,10 +36,9 @@ class L2bEnv(Trainer, gym.Env):
         self.update_freq = update_freq
         self.context_length = context_length
         self.iterator = None
-        # self.observation_space = gym.spaces.Tuple(
-        #     [self.env.observation_space, self.get_context_space()]
-        # )
-        self.observation_space = self.env.observation_space
+        self.observation_space = gym.spaces.Tuple(
+            [self.env.observation_space, self.get_context_space()]
+        )
         self.action_space = self.env.action_space
         self.rng = jax.random.PRNGKey(0)
         self.replay_buffer = ReplayBuffer(
@@ -94,21 +93,22 @@ class L2bEnv(Trainer, gym.Env):
         step = loop.env.send(self.env.action_space.sample())
         for t in range(self.max_timesteps) if self.max_timesteps else itertools.count():
             self.replay_buffer.add(step)
-            action = yield step.obs, step.reward, step.done, {}
+            action = yield (step.obs, con), step.reward, step.done, {}
             step = loop.env.send(action)
             if (t + 1) % self.update_freq == 0:
                 for _ in range(self.update_freq):
                     rng, update_rng = jax.random.split(rng)
                     sample = self.replay_buffer.sample(self.batch_size, rng=rng)
-                    self.report(
-                        actor_linear_b=params["actor/linear"].b.mean().item(),
-                        actor_linear_w=params["actor/linear"].w.mean().item(),
-                        actor_linear_1_b=params["actor/linear_1"].b.mean().item(),
-                        actor_linear_1_w=params["actor/linear_1"].w.mean().item(),
-                        actor_linear_2_b=params["actor/linear_2"].b.mean().item(),
-                        actor_linear_2_w=params["actor/linear_2"].w.mean().item(),
-                    )
                     params = loop.train.send(sample)
+
+                self.report(
+                    actor_linear_b=params["actor/linear"].b.mean().item(),
+                    actor_linear_w=params["actor/linear"].w.mean().item(),
+                    actor_linear_1_b=params["actor/linear_1"].b.mean().item(),
+                    actor_linear_1_w=params["actor/linear_1"].w.mean().item(),
+                    actor_linear_2_b=params["actor/linear_2"].b.mean().item(),
+                    actor_linear_2_w=params["actor/linear_2"].w.mean().item(),
+                )
 
                 con = np.stack(list(self.get_context(params)))
 
