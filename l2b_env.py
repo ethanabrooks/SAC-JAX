@@ -8,7 +8,7 @@ import numpy as np
 
 from debug_env import DebugEnv
 from replay_buffer import ReplayBuffer, Sample, Step
-from trainer import Trainer, Loops
+from trainer import Trainer, Loops, ReportData
 
 
 class CatObsSpace(gym.ObservationWrapper):
@@ -82,6 +82,7 @@ class L2bEnv(Trainer, gym.Env):
         self.replay_buffer.size = 0
         self.replay_buffer.ptr = 0
         loop = Loops(
+            report=self.report_loop(),
             env=self.env_loop(),
             train=self.agent.train_loop(
                 rng, sample_obs=self.env.observation_space.sample()
@@ -89,6 +90,7 @@ class L2bEnv(Trainer, gym.Env):
         )
         params = next(loop.train)
         self.report(new_params=1)
+        next(loop.report)
         s = next(loop.env)
         c = np.stack(list(self.get_context(params)))
         r = 0
@@ -101,6 +103,7 @@ class L2bEnv(Trainer, gym.Env):
             # r = self.eval_policy(params) if t else 0
             action = yield (s, c), r, t, {}
             step = loop.env.send(action)
+            loop.report.send(ReportData(reward=step.reward, done=step.done, t=t))
             r = self.eval_policy(params) if t else step.reward  # TODO
             self.replay_buffer.add(step)
             s = step.obs

@@ -5,7 +5,7 @@ import argparse
 import itertools
 from dataclasses import dataclass
 from pprint import pprint
-from typing import Any, Generator
+from typing import Any, Generator, Tuple
 
 import gym
 import jax
@@ -27,6 +27,14 @@ OptState = Any
 class Loops:
     env: Generator
     train: Generator
+    report: Generator
+
+
+@dataclass
+class ReportData:
+    reward: float
+    done: bool
+    t: int
 
 
 class Trainer:
@@ -137,15 +145,35 @@ class Trainer:
         else:
             pprint(kwargs)
 
+    def report_loop(self) -> Generator[None, ReportData, None]:
+        episode_reward = 0
+        episode_timesteps = 0
+        episode_num = 0
+
+        while True:
+            data = yield
+            episode_reward += data.reward
+
+            if data.done:
+                # +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
+                self.report(
+                    timestep=data.t + 1,
+                    episode=episode_num + 1,
+                    episode_timestep=episode_timesteps,
+                    reward=episode_reward,
+                )
+                # Reset environment
+                episode_reward = 0
+                episode_timesteps = 0
+                episode_num += 1
+
     def env_loop(
         self, env=None, max_timesteps=None
     ) -> Generator[Step, jnp.ndarray, None]:
         env = env or self.env
         max_timesteps = max_timesteps or self.max_timesteps
         obs, done = env.reset(), False
-        episode_reward = 0
         episode_timesteps = 0
-        episode_num = 0
         action = yield obs
 
         for t in range(int(max_timesteps)):
@@ -156,8 +184,7 @@ class Trainer:
             # This 'trick' converts the finite-horizon task into an infinite-horizon one. It does change the problem
             # we are solving, however it has been observed empirically to work pretty well. noinspection
             # noinspection PyProtectedMember
-            steps = env._max_episode_steps
-            done_bool = float(done) if episode_timesteps < steps else 0
+            done_bool = float(done) if episode_timesteps < env._max_episode_steps else 0
 
             action = yield Step(
                 obs=obs,
@@ -166,23 +193,11 @@ class Trainer:
                 reward=reward,
                 done=done_bool,
             )
-
             obs = next_obs
-            episode_reward += reward
 
             if done:
-                # +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
-                self.report(
-                    timestep=t + 1,
-                    episode=episode_num + 1,
-                    episode_timestep=episode_timesteps,
-                    reward=episode_reward,
-                )
                 # Reset environment
                 obs, done = env.reset(), False
-                episode_reward = 0
-                episode_timesteps = 0
-                episode_num += 1
 
     def act(self, params, obs, rng):
         return (
@@ -196,11 +211,13 @@ class Trainer:
         rng = self.rng
         replay_buffer = self.build_replay_buffer()
         loop = Loops(
+            report=self.report_loop(),
             env=self.env_loop(),
             train=self.agent.train_loop(
                 rng, sample_obs=self.env.observation_space.sample()
             ),
         )
+        next(loop.report)
         next(loop.env)
         params = next(loop.train)
 
@@ -226,6 +243,7 @@ class Trainer:
                 sample = replay_buffer.sample(self.batch_size, rng=rng)
                 params = loop.train.send(sample)
             try:
+                loop.report.send(ReportData(reward=step.reward, done=step.done, t=t))
                 step = loop.env.send(action)
 
             except StopIteration:
