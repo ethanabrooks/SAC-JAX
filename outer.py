@@ -2,40 +2,17 @@ import argparse
 import re
 import numpy as np
 
-import jax
 from gym.wrappers import TimeLimit
 
 from args import add_arguments
 from l2b_agent import L2bAgent
 from l2b_env import L2bEnv, CatObsSpace
-from replay_buffer import ReplayBuffer, BufferItem
 from trainer import Trainer
 
 
-class DoubleReplayBuffer(ReplayBuffer):
-    def __init__(self, sample_done_prob, **kwargs):
-        super().__init__(**kwargs)
-        self.sample_done_prob = sample_done_prob
-        self.done_buffer = ReplayBuffer(**kwargs)
-
-    def add(self, item: BufferItem) -> None:
-        if item.not_done:
-            super().add(item)
-        else:
-            self.done_buffer.add(item)
-
-    def sample(self, *args, rng, **kwargs) -> BufferItem:
-        if jax.random.choice(
-            rng, 2, p=[1 - self.sample_done_prob, self.sample_done_prob]
-        ):
-            return self.done_buffer.sample(*args, rng=rng, **kwargs)
-        return super().sample(*args, rng=rng, **kwargs)
-
-
-class OuterTrainer(Trainer):
-    def __init__(self, sample_done_prob, inner_args, **outer_args):
+class L2bTrainer(Trainer):
+    def __init__(self, inner_args, **outer_args):
         self.inner_args = inner_args
-        self.sample_done_prob = sample_done_prob
         super().__init__(**outer_args)
 
     def report(self, **kwargs):
@@ -56,6 +33,7 @@ class OuterTrainer(Trainer):
                 get_args(inner),
                 context_length=context_length,
                 env_id=None,
+                sample_done_prob=sample_done_prob,
                 update_freq=update_freq,
                 use_tune=use_tune,
             )
@@ -63,21 +41,12 @@ class OuterTrainer(Trainer):
                 **dict(get_args(outer)),
                 context_length=context_length,
                 env_id=None,
-                sample_done_prob=sample_done_prob,
                 use_tune=use_tune,
             )
 
             cls(**outer_args, inner_args=inner_args).train()
 
         run(**config)
-
-    def build_replay_buffer(self):
-        return DoubleReplayBuffer(
-            obs_shape=self.env.observation_space.shape,
-            action_shape=self.env.action_space.shape,
-            max_size=self.replay_size,
-            sample_done_prob=self.sample_done_prob,
-        )
 
     def make_env(self):
         def make_env(max_timesteps, **kwargs):
@@ -126,4 +95,4 @@ if __name__ == "__main__":
     PARSER.add_argument("--context-length", type=int, default=100, double=False)
     PARSER.add_argument("--max-episode-steps", type=int, default=10000, double=False)
     add_arguments(PARSER)
-    OuterTrainer.main(**vars(PARSER.parse_args()))
+    L2bTrainer.main(**vars(PARSER.parse_args()))

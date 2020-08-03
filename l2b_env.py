@@ -6,7 +6,8 @@ import jax
 import numpy as np
 
 from debug_env import DebugEnv
-from trainer import Trainer
+from replay_buffer import ReplayBuffer, BufferItem
+from trainer import Trainer, Loops
 
 
 class CatObsSpace(gym.ObservationWrapper):
@@ -29,7 +30,7 @@ class CatObsSpace(gym.ObservationWrapper):
 
 
 class L2bEnv(Trainer, gym.Env):
-    def __init__(self, update_freq, context_length, *args, **kwargs):
+    def __init__(self, update_freq, context_length, sample_done_prob, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.update_freq = update_freq
         self.context_length = context_length
@@ -39,6 +40,12 @@ class L2bEnv(Trainer, gym.Env):
         )
         self.action_space = self.env.action_space
         self.rng = jax.random.PRNGKey(0)
+        self.replay_buffer = DoubleReplayBuffer(
+            obs_shape=self.env.observation_space.shape,
+            action_shape=self.env.action_space.shape,
+            max_size=self.replay_size,
+            sample_done_prob=sample_done_prob,
+        )
 
     def seed(self, seed=None):
         seed = seed or 0
@@ -72,21 +79,28 @@ class L2bEnv(Trainer, gym.Env):
         return s
 
     def _generator(self, rng,) -> Generator:
-        replay_buffer, loop = self.init(rng)
+        self.replay_buffer.reset()
+        loop = Loops(
+            env=self.env_loop(),
+            train=self.agent.train_loop(
+                rng, sample_obs=self.env.observation_space.sample()
+            ),
+        )
         params = next(loop.train)
         s = next(loop.env)
         c = np.stack(list(self.get_context(params)))
+        r = 0
         for i in itertools.count():
             t = i == self.max_timesteps
             r = self.eval_policy(params) if t else 0
             action = yield (s, c), r, t, {}
             step = loop.env.send(action)
-            replay_buffer.add(step)
+            self.replay_buffer.add(step)
             s = step.obs
             if i > self.start_timesteps and i % self.update_freq == 0:
                 for _ in range(self.update_freq):
                     rng, update_rng = jax.random.split(rng)
-                    sample = replay_buffer.sample(self.batch_size, rng=rng)
+                    sample = self.replay_buffer.sample(self.batch_size, rng=rng)
                     params = loop.train.send(sample)
 
                 c = np.stack(list(self.get_context(params)))
@@ -106,3 +120,27 @@ class L2bEnv(Trainer, gym.Env):
 
     def render(self, mode="human"):
         pass
+
+
+class DoubleReplayBuffer(ReplayBuffer):
+    def __init__(self, sample_done_prob, **kwargs):
+        super().__init__(**kwargs)
+        self.sample_done_prob = sample_done_prob
+        self.done_buffer = ReplayBuffer(**kwargs)
+
+    def add(self, item: BufferItem) -> None:
+        if item.not_done:
+            super().add(item)
+        else:
+            self.done_buffer.add(item)
+
+    def sample(self, *args, rng, **kwargs) -> BufferItem:
+        if jax.random.choice(
+            rng, 2, p=[1 - self.sample_done_prob, self.sample_done_prob]
+        ):
+            return self.done_buffer.sample(*args, rng=rng, **kwargs)
+        return super().sample(*args, rng=rng, **kwargs)
+
+    def reset(self):
+        self.size = 0
+        self.ptr = 0
