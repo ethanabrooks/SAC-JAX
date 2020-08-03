@@ -1,4 +1,4 @@
+- get things working with `Pendulum`
 - get stochastic latent variables (re-param trick)
-- check that `c` is fed correctly into `ContextEncoder`
-- get things working with `DebugEnv`
+- deal with the fact that encoder gets `nans`.
 - slowly down-weight extrinsic reward.
