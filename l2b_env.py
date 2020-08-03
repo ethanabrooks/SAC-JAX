@@ -26,7 +26,7 @@ class CatObsSpace(gym.ObservationWrapper):
 
     def observation(self, observation):
         s = np.concatenate([o.flatten() for o in observation])
-        assert self.observation_space.contains(s)
+        # assert self.observation_space.contains(s)
         return s
 
 
@@ -80,6 +80,8 @@ class L2bEnv(Trainer, gym.Env):
         return s
 
     def _generator(self, rng,) -> Generator:
+        self.replay_buffer.size = 0
+        self.replay_buffer.ptr = 0
         loop = Loops(
             env=self.env_loop(report_loop=self.report_loop()),
             train=self.agent.train_loop(
@@ -88,29 +90,11 @@ class L2bEnv(Trainer, gym.Env):
         )
         next(loop.env)
         params = next(loop.train)
-
-        # Evaluate untrained policy.
-        # We evaluate for 100 episodes as 10 episodes provide a very noisy estimation in some domains.
-        # evaluations = [self.eval_policy(params)]  # TODO
-        # best_performance = evaluations[-1]
-        # best_actor_params = params
-        # if save_model: agent.save(f"./models/{policy}/{file_name}")
-
+        con = np.stack(list(self.get_context(params)))
         step = loop.env.send(self.env.action_space.sample())
         for t in range(self.max_timesteps) if self.max_timesteps else itertools.count():
             self.replay_buffer.add(step)
             action = yield step.obs, step.reward, step.done, {}
-            if t <= self.start_timesteps:
-                action = self.env.action_space.sample()
-            else:
-                # Select action randomly or according to policy
-                rng, noise_rng = jax.random.split(rng)
-                action = self.act(params, step.obs, noise_rng)
-
-                # Train agent after collecting sufficient data
-                rng, update_rng = jax.random.split(rng)
-                sample = self.replay_buffer.sample(self.batch_size, rng=rng)
-                params = loop.train.send(sample)
             step = loop.env.send(action)
 
         self.report(final_reward=self.eval_policy(params))
