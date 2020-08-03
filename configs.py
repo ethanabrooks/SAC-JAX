@@ -31,6 +31,22 @@ def big_values(start, stop):
     return [j for i in range(start, stop) for j in ((10 ** i), 5 * (10 ** i))]
 
 
+pendulum = {
+    "batch_size": 256,
+    "discount": 0.99,
+    "env_id": "Pendulum-v0",
+    "eval_freq": 5000.0,
+    "expl_noise": 0.01,
+    "lr": 0.001,
+    "max_timesteps": 15000,
+    "noise_clip": 0.01,
+    "policy": "TD3",
+    "policy_freq": 1,
+    "policy_noise": 0.2,
+    "replay_size": 200000,
+    "seed": 3,
+    "start_timesteps": 10,
+}
 debug4 = get_config("debug4")
 search = dict(
     batch_size=hp.choice("batch_size", medium_values(6, 10)),
@@ -41,20 +57,6 @@ search = dict(
     seed=hp.randint("seed", 20),
     start_timesteps=hp.choice("start_timesteps", big_values(0, 2)),
 )
-single = {
-    "batch_size": 128,
-    "discount": 0.99,
-    "eval_freq": 5000.0,
-    "expl_noise": 0.5,
-    "lr": 0.0005,
-    "noise_clip": 0.1,
-    "policy": "TD3",
-    "policy_freq": 1,
-    "policy_noise": 0.2,
-    "replay_size": 200000,
-    "seed": 8,
-    "start_timesteps": 5,
-}
 outer_search = dict(
     outer_batch_size=hp.choice("outer_batch_size", medium_values(7, 9)),
     outer_expl_noise=hp.choice("outer_expl_noise", small_values(1, 3)),
@@ -68,41 +70,26 @@ l2b_search = dict(
     context_length=hp.choice("context_length", [40, 50, 60]),
     sample_done_prob=hp.choice("sample_done_prob", [0.1, 0.3, 0.5]),
     update_freq=hp.choice("update_freq", [40, 50, 75, 100]),
-    **dict(copy_args(debug4, "inner_")),
+    inner_env_id=None,
+    **dict(copy_args(search, "inner_")),
     **outer_search,
 )
 l2b_search.update(
-    inner_max_timesteps=hp.choice("inner_max_timesteps", [500, 1000, 1500])
+    inner_max_timesteps=hp.choice("inner_max_timesteps", [200, 500, 1000, 1500]),
+    outer_max_timesteps=4000,
 )
-double = dict(
-    **dict(copy_args(single, "outer_")),
-    **dict(copy_args(single, "inner_")),
-    update_freq=20,
-    context_length=200,
+debug_l2b = dict(
+    context_length=2,
+    sample_done_prob=0,
+    update_freq=1,
+    **dict(copy_args(pendulum, "inner_")),
+    **dict(copy_args(pendulum, "outer_")),
 )
-# double.update(inner_max_timesteps=2)
+debug_l2b.update(inner_max_timesteps=15000, outer_max_timesteps=15000)
 configs = dict(
     search=search,
-    pendulum={
-        "batch_size": 256,
-        "discount": 0.99,
-        "env_id": "Pendulum-v0",
-        "eval_freq": 5000.0,
-        "expl_noise": 0.01,
-        "lr": 0.001,
-        "max_timesteps": 15000,
-        "noise_clip": 0.01,
-        "policy": "TD3",
-        "policy_freq": 1,
-        "policy_noise": 0.2,
-        "replay_size": 200000,
-        "seed": 3,
-        "start_timesteps": 10,
-    },
+    pendulum=pendulum,
     debug4=debug4,
     l2b_search=l2b_search,
-    # TODO
-    single=single,
-    # TODO
-    double=double,
+    debug_l2b=debug_l2b,
 )
