@@ -87,7 +87,7 @@ l2b_search = dict(
     **dict(copy_args(debug4, "inner_")),
     **outer_search,
 )
-l2b_search.update(inner_lr=0.02)
+l2b_search.update(inner_lr=0.03)
 l2b_search.update(
     inner_max_timesteps=hp.choice("inner_max_timesteps", [500, 1000, 1500])
 )
