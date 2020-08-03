@@ -85,7 +85,7 @@ debug_l2b = dict(
     **dict(copy_args(pendulum, "inner_")),
     **dict(copy_args(pendulum, "outer_")),
 )
-debug_l2b.update(inner_max_timesteps=15000, outer_max_timesteps=1)
+debug_l2b.update(inner_max_timesteps=15000, outer_max_timesteps=15000)
 configs = dict(
     search=search,
     pendulum=pendulum,
