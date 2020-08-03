@@ -194,15 +194,12 @@ class Trainer:
 
     def train(self):
         rng = self.rng
-        replay_buffer = ReplayBuffer(
-            self.env.observation_space.shape,
-            self.env.action_space.shape,
-            max_size=self.replay_size,
-        )
-        sample_obs = self.env.observation_space.sample()
+        replay_buffer = self.build_replay_buffer()
         loop = Loops(
             env=self.env_loop(),
-            train=self.agent.train_loop(rng, sample_obs=sample_obs),
+            train=self.agent.train_loop(
+                rng, sample_obs=self.env.observation_space.sample()
+            ),
         )
         next(loop.env)
         params = next(loop.train)
@@ -248,6 +245,13 @@ class Trainer:
         # params = best_actor_params
         # evaluations.append(self.eval_policy(params))
         # print(f"Selected policy has an average score of: {evaluations[-1]:.3f}")
+
+    def build_replay_buffer(self):
+        return ReplayBuffer(
+            self.env.observation_space.shape,
+            self.env.action_space.shape,
+            max_size=self.replay_size,
+        )
 
     def make_env(self):
         return gym.make(self.env_id)
