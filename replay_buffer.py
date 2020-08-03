@@ -13,7 +13,12 @@ class Sample:
     action: T
     next_obs: T
     reward: T
-    not_done: T
+    done: T
+
+
+@dataclass
+class Step(Sample):
+    pass
 
 
 class ReplayBuffer(object):
@@ -28,15 +33,15 @@ class ReplayBuffer(object):
         self.action = np.zeros((max_size, *action_shape))
         self.next_obs = np.zeros((max_size, *obs_shape))
         self.reward = np.zeros((max_size, 1))
-        self.not_done = np.zeros((max_size, 1))
+        self.done = np.zeros((max_size, 1))
 
-    def add(self, obs, action, next_obs, reward, not_done) -> None:
+    def add(self, sample: Sample) -> None:
         """Memory built for per-transition interaction, does not handle batch updates."""
-        self.obs[self.ptr] = obs
-        self.action[self.ptr] = action
-        self.next_obs[self.ptr] = next_obs
-        self.reward[self.ptr] = reward
-        self.not_done[self.ptr] = not_done
+        self.obs[self.ptr] = sample.obs
+        self.action[self.ptr] = sample.action
+        self.next_obs[self.ptr] = sample.next_obs
+        self.reward[self.ptr] = sample.reward
+        self.done[self.ptr] = sample.done
 
         self.ptr = (self.ptr + 1) % self.max_size
         self.size = min(self.size + 1, self.max_size)
@@ -52,5 +57,5 @@ class ReplayBuffer(object):
             self.action[ind],
             self.next_obs[ind],
             self.reward[ind],
-            self.not_done[ind],
+            self.done[ind],
         )

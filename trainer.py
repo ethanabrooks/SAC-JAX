@@ -18,19 +18,9 @@ from ray.tune.suggest.hyperopt import HyperOptSearch
 import configs
 from agent import Agent
 from args import add_arguments
-from replay_buffer import ReplayBuffer
+from replay_buffer import ReplayBuffer, Sample, Step
 
 OptState = Any
-
-
-@dataclass
-class Step:
-    T = np.ndarray
-    obs: T
-    action: T
-    next_obs: T
-    reward: T
-    done: bool
 
 
 @dataclass
@@ -75,6 +65,8 @@ class Trainer:
 
         self.env = self.make_env()
         self.env.seed(seed)
+        self.env.action_space.np_random.seed(seed)
+        self.env.observation_space.np_random.seed(seed)
         self.max_action = self.env.action_space.high
         self.min_action = self.env.action_space.low
         self.action_dim = int(np.prod(self.env.action_space.shape))
@@ -202,13 +194,7 @@ class Trainer:
 
         step = loop.env.send(self.env.action_space.sample())
         for t in itertools.count():
-            replay_buffer.add(
-                obs=step.obs,
-                action=step.action,
-                next_obs=step.next_obs,
-                reward=step.reward,
-                not_done=1 - float(step.done),
-            )
+            replay_buffer.add(step)
             if t <= self.start_timesteps:
                 action = self.env.action_space.sample()
             else:
