@@ -26,7 +26,7 @@ class CatObsSpace(gym.ObservationWrapper):
 
     def observation(self, observation):
         s = np.concatenate([o.flatten() for o in observation])
-        # assert self.observation_space.contains(s)
+        assert self.observation_space.contains(s)
         return s
 
 
@@ -80,7 +80,6 @@ class L2bEnv(Trainer, gym.Env):
         return s
 
     def _generator(self, rng,) -> Generator:
-        replay_buffer = self.build_replay_buffer()
         loop = Loops(
             env=self.env_loop(report_loop=self.report_loop()),
             train=self.agent.train_loop(
@@ -99,7 +98,7 @@ class L2bEnv(Trainer, gym.Env):
 
         step = loop.env.send(self.env.action_space.sample())
         for t in range(self.max_timesteps) if self.max_timesteps else itertools.count():
-            replay_buffer.add(step)
+            self.replay_buffer.add(step)
             action = yield step.obs, step.reward, step.done, {}
             if t <= self.start_timesteps:
                 action = self.env.action_space.sample()
@@ -110,7 +109,7 @@ class L2bEnv(Trainer, gym.Env):
 
                 # Train agent after collecting sufficient data
                 rng, update_rng = jax.random.split(rng)
-                sample = replay_buffer.sample(self.batch_size, rng=rng)
+                sample = self.replay_buffer.sample(self.batch_size, rng=rng)
                 params = loop.train.send(sample)
             step = loop.env.send(action)
 
