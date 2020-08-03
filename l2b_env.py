@@ -3,10 +3,11 @@ from typing import Generator
 
 import gym
 import jax
+import jax.numpy as jnp
 import numpy as np
 
 from debug_env import DebugEnv
-from replay_buffer import ReplayBuffer, Sample
+from replay_buffer import ReplayBuffer, Sample, Step
 from trainer import Trainer, Loops
 
 
@@ -156,19 +157,15 @@ class DoubleReplayBuffer(ReplayBuffer):
         self.sample_done_prob = sample_done_prob
         self.done_buffer = ReplayBuffer(**kwargs)
 
-    def add(self, sample: Sample) -> None:
-        if sample.done:
-            self.done_buffer.add(sample)
+    def add(self, step: Step) -> None:
+        if step.done:
+            self.done_buffer.add(step)
         else:
-            super().add(sample)
+            super().add(step)
 
-    def sample(self, *args, rng, **kwargs) -> Sample:
+    def sample(self, batch_size: int, rng: jnp.ndarray) -> Sample:
         if jax.random.choice(
             rng, 2, p=[1 - self.sample_done_prob, self.sample_done_prob]
         ):
-            return self.done_buffer.sample(*args, rng=rng, **kwargs)
-        return super().sample(*args, rng=rng, **kwargs)
-
-    def reset(self):
-        self.size = 0
-        self.ptr = 0
+            return self.done_buffer.sample(batch_size, rng)
+        return super().sample(batch_size, rng)
