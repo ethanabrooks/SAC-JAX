@@ -1,0 +1,4 @@
+- get things working with `Pendulum`
+- get stochastic latent variables (re-param trick)
+- deal with the fact that encoder gets `nans`.
+- slowly down-weight extrinsic reward.
