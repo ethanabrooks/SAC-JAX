@@ -16,6 +16,9 @@ class L2bTrainer(Trainer):
         self.inner_args = inner_args
         super().__init__(**outer_args, env_id=env_id)
 
+    def report(self, **kwargs):
+        super().report(**{"outer_" + k: v for k, v in kwargs.items()})
+
     @classmethod
     def run(cls, config: dict):
         def run(context_length, sample_done_prob, update_freq, use_tune, **kwargs):
