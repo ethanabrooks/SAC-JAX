@@ -57,20 +57,6 @@ search = dict(
     seed=hp.randint("seed", 20),
     start_timesteps=hp.choice("start_timesteps", big_values(0, 2)),
 )
-single = {
-    "batch_size": 128,
-    "discount": 0.99,
-    "eval_freq": 5000.0,
-    "expl_noise": 0.5,
-    "lr": 0.0005,
-    "noise_clip": 0.1,
-    "policy": "TD3",
-    "policy_freq": 1,
-    "policy_noise": 0.2,
-    "replay_size": 200000,
-    "seed": 8,
-    "start_timesteps": 5,
-}
 outer_search = dict(
     outer_batch_size=hp.choice("outer_batch_size", medium_values(7, 9)),
     outer_expl_noise=hp.choice("outer_expl_noise", small_values(1, 3)),
@@ -92,20 +78,18 @@ l2b_search.update(
     inner_max_timesteps=hp.choice("inner_max_timesteps", [200, 500, 1000, 1500]),
     outer_max_timesteps=4000,
 )
-double = dict(
-    **dict(copy_args(single, "outer_")),
-    **dict(copy_args(single, "inner_")),
-    update_freq=20,
-    context_length=200,
+debug_l2b = dict(
+    context_length=50,
+    sample_done_prob=0,
+    update_freq=1,
+    **dict(copy_args(pendulum, "inner_")),
+    **dict(copy_args(pendulum, "outer_")),
 )
-# double.update(inner_max_timesteps=2)
+debug_l2b.update(inner_max_timesteps=15000, outer_max_timesteps=1)
 configs = dict(
     search=search,
     pendulum=pendulum,
     debug4=debug4,
     l2b_search=l2b_search,
-    # TODO
-    single=single,
-    # TODO
-    double=double,
+    debug_l2b=debug_l2b,
 )

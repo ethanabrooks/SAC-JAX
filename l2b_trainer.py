@@ -11,9 +11,9 @@ from trainer import Trainer
 
 
 class L2bTrainer(Trainer):
-    def __init__(self, inner_args, **outer_args):
+    def __init__(self, inner_args, env_id=None, **outer_args):
         self.inner_args = inner_args
-        super().__init__(**outer_args)
+        super().__init__(**outer_args, env_id=env_id)
 
     def report(self, **kwargs):
         super().report(**{"outer_" + k: v for k, v in kwargs.items()})
@@ -39,7 +39,6 @@ class L2bTrainer(Trainer):
             outer_args = dict(
                 **dict(get_args(outer)),
                 context_length=context_length,
-                env_id=None,
                 use_tune=use_tune,
             )
             cls(**outer_args, inner_args=inner_args).train()
