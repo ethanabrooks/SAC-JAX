@@ -157,7 +157,7 @@ class DoubleReplayBuffer(ReplayBuffer):
         else:
             self.done_buffer.add(**kwargs, not_done=not_done)
 
-    def sample(self, rng, batch_size) -> Sample:
+    def sample(self, batch_size, rng) -> Sample:
         if self.done_buffer.size >= batch_size and jax.random.choice(
             rng, 2, p=[1 - self.sample_done_prob, self.sample_done_prob]
         ):

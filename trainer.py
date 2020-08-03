@@ -219,7 +219,7 @@ class Trainer:
                 # Train agent after collecting sufficient data
                 rng, update_rng = jax.random.split(rng)
                 if replay_buffer.size > self.batch_size:
-                    sample = replay_buffer.sample(self.batch_size, rng=rng)
+                    sample = replay_buffer.sample(batch_size=self.batch_size, rng=rng)
                     params = loop.train.send(sample)
             try:
                 step = loop.env.send(action)
