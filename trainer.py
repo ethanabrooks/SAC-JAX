@@ -262,7 +262,8 @@ class Trainer:
         # print(f"Selected policy has an average score of: {evaluations[-1]:.3f}")
 
     def make_env(self):
-        return TimeLimit(DebugEnv(), max_episode_steps=2)  # TODO: gym.make(self.env_id)
+        return gym.make(self.env_id)
+        # return TimeLimit(DebugEnv(), max_episode_steps=2)
 
     def eval_policy(self, params) -> float:
         eval_env = self.make_env()

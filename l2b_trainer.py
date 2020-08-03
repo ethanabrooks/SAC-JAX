@@ -32,7 +32,6 @@ class L2bTrainer(Trainer):
             inner_args = dict(
                 get_args(inner),
                 context_length=context_length,
-                env_id=None,
                 sample_done_prob=sample_done_prob,
                 update_freq=update_freq,
                 use_tune=use_tune,
