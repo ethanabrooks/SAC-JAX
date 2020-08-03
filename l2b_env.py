@@ -65,6 +65,9 @@ class L2bEnv(Trainer, gym.Env):
         )
         return gym.spaces.Box(low=low, high=high)
 
+    def make_env(self):
+        return DebugEnv()
+
     def step(self, action):
         return self.iterator.send(action)
 

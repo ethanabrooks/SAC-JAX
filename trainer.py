@@ -143,23 +143,46 @@ class Trainer:
         env = env or self.env
         max_timesteps = max_timesteps or self.max_timesteps
         obs, done = env.reset(), False
+        episode_reward = 0
+        episode_timesteps = 0
+        episode_num = 0
         action = yield obs
 
         for t in range(int(max_timesteps)):
 
+            episode_timesteps += 1
             # Perform action
             next_obs, reward, done, _ = env.step(action)
             # This 'trick' converts the finite-horizon task into an infinite-horizon one. It does change the problem
             # we are solving, however it has been observed empirically to work pretty well. noinspection
             # noinspection PyProtectedMember
+            steps = env._max_episode_steps
+            done_bool = float(done) if episode_timesteps < steps else 0
+
             action = yield Step(
-                obs=obs, action=action, next_obs=next_obs, reward=reward, done=done,
+                obs=obs,
+                action=action,
+                next_obs=next_obs,
+                reward=reward,
+                done=done_bool,
             )
 
             obs = next_obs
+            episode_reward += reward
 
             if done:
+                # +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
+                self.report(
+                    timestep=t + 1,
+                    episode=episode_num + 1,
+                    episode_timestep=episode_timesteps,
+                    reward=episode_reward,
+                )
+                # Reset environment
                 obs, done = env.reset(), False
+                episode_reward = 0
+                episode_timesteps = 0
+                episode_num += 1
 
     def act(self, params, obs, rng):
         return (
@@ -188,10 +211,6 @@ class Trainer:
         # best_actor_params = params
         # if save_model: agent.save(f"./models/{policy}/{file_name}")
 
-        episode_reward = 0
-        episode_timesteps = 0
-        episode_num = 0
-
         step = loop.env.send(self.env.action_space.sample())
         for t in itertools.count():
             replay_buffer.add(step)
@@ -204,29 +223,14 @@ class Trainer:
 
                 # Train agent after collecting sufficient data
                 rng, update_rng = jax.random.split(rng)
-                if replay_buffer.size > self.batch_size:
-                    sample = replay_buffer.sample(batch_size=self.batch_size, rng=rng)
-                    params = loop.train.send(sample)
+                sample = replay_buffer.sample(self.batch_size, rng=rng)
+                params = loop.train.send(sample)
             try:
                 step = loop.env.send(action)
 
             except StopIteration:
                 self.report(final_reward=self.eval_policy(params))
                 return
-
-            episode_timesteps += 1
-            episode_reward += step.reward
-            if step.done:
-                # +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
-                self.report(
-                    timestep=t + 1,
-                    episode=episode_num + 1,
-                    episode_timestep=episode_timesteps,
-                    reward=episode_reward,
-                )
-                episode_reward = 0
-                episode_timesteps = 0
-                episode_num += 1
 
             # Evaluate episode
             # if (t + 1) % self.eval_freq == 0:
@@ -251,7 +255,6 @@ class Trainer:
 
     def make_env(self):
         return gym.make(self.env_id)
-        # return TimeLimit(DebugEnv(), max_episode_steps=2)
 
     def eval_policy(self, params) -> float:
         eval_env = self.make_env()
