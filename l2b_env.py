@@ -91,6 +91,10 @@ class L2bEnv(Trainer, gym.Env):
         s = next(loop.env)
         c = np.stack(list(self.get_context(params)))
         r = 0
+
+        episode_reward = 0
+        episode_timesteps = 0
+        episode_num = 0
         for i in itertools.count():
             t = i == self.max_timesteps
             # r = self.eval_policy(params) if t else 0
@@ -103,9 +107,31 @@ class L2bEnv(Trainer, gym.Env):
                 for _ in range(self.update_freq):
                     rng, update_rng = jax.random.split(rng)
                     sample = self.replay_buffer.sample(self.batch_size, rng=rng)
+                    self.report(
+                        actor_linear_b=params["actor/linear"].b.mean().item(),
+                        actor_linear_w=params["actor/linear"].w.mean().item(),
+                        actor_linear_1_b=params["actor/linear_1"].b.mean().item(),
+                        actor_linear_1_w=params["actor/linear_1"].w.mean().item(),
+                        actor_linear_2_b=params["actor/linear_2"].b.mean().item(),
+                        actor_linear_2_w=params["actor/linear_2"].w.mean().item(),
+                    )
                     params = loop.train.send(sample)
 
                 c = np.stack(list(self.get_context(params)))
+
+            episode_timesteps += 1
+            episode_reward += step.reward
+            if step.done:
+                # +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
+                self.report(
+                    timestep=i + 1,
+                    episode=episode_num + 1,
+                    episode_timestep=episode_timesteps,
+                    reward=episode_reward,
+                )
+                episode_reward = 0
+                episode_timesteps = 0
+                episode_num += 1
 
     def get_context(self, params):
         env_loop = self.env_loop(env=self.make_env(), max_timesteps=self.context_length)
