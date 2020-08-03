@@ -242,20 +242,18 @@ class Trainer:
                 rng, update_rng = jax.random.split(rng)
                 sample = replay_buffer.sample(self.batch_size, rng=rng)
                 params = loop.train.send(sample)
-            try:
-                step = loop.env.send(action)
+            step = loop.env.send(action)
 
-            except StopIteration:
-                self.report(final_reward=self.eval_policy(params))
-                return
+        self.report(final_reward=self.eval_policy(params))
+        return
 
-            # Evaluate episode
-            # if (t + 1) % self.eval_freq == 0:
-            # evaluations.append(self.eval_policy(params))
-            # if evaluations[-1] > best_performance:
-            # best_performance = evaluations[-1]
-            # best_actor_params = params
-            # if save_model: agent.save(f"./models/{policy}/{file_name}")
+        # Evaluate episode
+        # if (t + 1) % self.eval_freq == 0:
+        # evaluations.append(self.eval_policy(params))
+        # if evaluations[-1] > best_performance:
+        # best_performance = evaluations[-1]
+        # best_actor_params = params
+        # if save_model: agent.save(f"./models/{policy}/{file_name}")
 
         # At the end, re-evaluate the policy which is presumed to be best. This ensures an un-biased estimator when
         # reporting the average best results across each run.
