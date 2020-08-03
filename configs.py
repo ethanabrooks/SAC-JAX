@@ -84,12 +84,13 @@ l2b_search = dict(
     context_length=hp.choice("context_length", [40, 50, 60]),
     sample_done_prob=hp.choice("sample_done_prob", [0.1, 0.3, 0.5]),
     update_freq=hp.choice("update_freq", [40, 50, 75, 100]),
-    **dict(copy_args(debug4, "inner_")),
+    inner_env_id=None,
+    **dict(copy_args(search, "inner_")),
     **outer_search,
 )
-l2b_search.update(inner_lr=0.03)
 l2b_search.update(
-    inner_max_timesteps=hp.choice("inner_max_timesteps", [500, 1000, 1500])
+    inner_max_timesteps=hp.choice("inner_max_timesteps", [200, 500, 1000, 1500]),
+    outer_max_timesteps=4000,
 )
 double = dict(
     **dict(copy_args(single, "outer_")),
