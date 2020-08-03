@@ -45,5 +45,5 @@ def add_arguments(parser):
     parser.add_argument("--name")
     parser.add_argument("--num-samples", type=int)
     parser.add_argument("--no-tune", dest="use_tune", action="store_false")
-    parser.add_argument("--cpus-per-trial", "-c", type=int, default=2)
+    parser.add_argument("--cpus-per-trial", "-c", type=int, default=6)
     parser.add_argument("--gpus-per-trial", "-g", type=int, default=1)
