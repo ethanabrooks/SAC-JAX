@@ -167,17 +167,16 @@ class Trainer:
                 episode_num += 1
 
     def env_loop(
-        self, env=None, max_timesteps=None, report_loop=None
+        self, env=None, report_loop=None
     ) -> Generator[Step, jnp.ndarray, None]:
         if report_loop:
             next(report_loop)
         env = env or self.env
-        max_timesteps = max_timesteps or self.max_timesteps
         obs, done = env.reset(), False
         episode_timesteps = 0
         action = yield obs
 
-        for t in range(int(max_timesteps)):
+        for t in itertools.count():
 
             episode_timesteps += 1
             # Perform action
@@ -230,7 +229,7 @@ class Trainer:
         # if save_model: agent.save(f"./models/{policy}/{file_name}")
 
         step = loop.env.send(self.env.action_space.sample())
-        for t in itertools.count():
+        for t in range(self.max_timesteps) if self.max_timesteps else itertools.count():
             replay_buffer.add(step)
             if t <= self.start_timesteps:
                 action = self.env.action_space.sample()

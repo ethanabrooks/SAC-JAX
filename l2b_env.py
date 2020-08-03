@@ -90,22 +90,20 @@ class L2bEnv(Trainer, gym.Env):
         )
         params = next(loop.train)
         self.report(new_params=1)
-        s = next(loop.env)
-        c = np.stack(list(self.get_context(params)))
-        r = 0
+        con = np.stack(list(self.get_context(params)))
+        obs = next(loop.env), con
+        rew = 0
 
-        episode_reward = 0
-        episode_timesteps = 0
-        episode_num = 0
-        for i in itertools.count():
-            t = i == self.max_timesteps
-            # r = self.eval_policy(params) if t else 0
-            action = yield (s, c), r, t, {}
-            step = loop.env.send(action)
-            r = self.eval_policy(params) if t else step.reward  # TODO
+        step = loop.env.send(self.env.action_space.sample())
+        for i in range(self.max_timesteps) if self.max_timesteps else itertools.count():
             self.replay_buffer.add(step)
-            s = step.obs
-            if i % self.update_freq == 0 and self.replay_buffer.size > self.batch_size:
+            term = i == self.max_timesteps
+            # rew = self.eval_policy(params) if t else 0
+            action = yield obs, rew, term, {}
+            step = loop.env.send(action)
+            rew = self.eval_policy(params) if term else step.reward  # TODO
+            obs = step.obs, con
+            if (i + 1) % self.update_freq == 0:
                 for _ in range(self.update_freq):
                     rng, update_rng = jax.random.split(rng)
                     sample = self.replay_buffer.sample(self.batch_size, rng=rng)
@@ -119,24 +117,10 @@ class L2bEnv(Trainer, gym.Env):
                     )
                     params = loop.train.send(sample)
 
-                c = np.stack(list(self.get_context(params)))
-
-            episode_timesteps += 1
-            episode_reward += step.reward
-            if step.done:
-                # +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
-                self.report(
-                    timestep=i + 1,
-                    episode=episode_num + 1,
-                    episode_timestep=episode_timesteps,
-                    reward=episode_reward,
-                )
-                episode_reward = 0
-                episode_timesteps = 0
-                episode_num += 1
+                # con = np.stack(list(self.get_context(params)))
 
     def get_context(self, params):
-        env_loop = self.env_loop(env=self.make_env(), max_timesteps=self.context_length)
+        env_loop = self.env_loop(env=self.make_env())
         s1 = next(env_loop)
         for _ in range(self.context_length):
             self.rng, noise_rng = jax.random.split(self.rng)
