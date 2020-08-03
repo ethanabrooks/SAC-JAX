@@ -31,7 +31,7 @@ class CatObsSpace(gym.ObservationWrapper):
 
 
 class L2bEnv(Trainer, gym.Env):
-    def __init__(self, update_freq, context_length, sample_done_prob, *args, **kwargs):
+    def __init__(self, update_freq, context_length, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.update_freq = update_freq
         self.context_length = context_length
@@ -41,11 +41,10 @@ class L2bEnv(Trainer, gym.Env):
         )
         self.action_space = self.env.action_space
         self.rng = jax.random.PRNGKey(0)
-        self.replay_buffer = DoubleReplayBuffer(
+        self.replay_buffer = ReplayBuffer(
             obs_shape=self.env.observation_space.shape,
             action_shape=self.env.action_space.shape,
             max_size=self.replay_size,
-            sample_done_prob=sample_done_prob,
         )
 
     def seed(self, seed=None):
@@ -81,7 +80,8 @@ class L2bEnv(Trainer, gym.Env):
         return s
 
     def _generator(self, rng,) -> Generator:
-        self.replay_buffer.reset()
+        self.replay_buffer.size = 0
+        self.replay_buffer.ptr = 0
         loop = Loops(
             env=self.env_loop(),
             train=self.agent.train_loop(
