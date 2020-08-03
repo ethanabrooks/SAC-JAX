@@ -106,7 +106,7 @@ class L2bEnv(Trainer, gym.Env):
                 not_done=1 - float(step.done),
             )
             s = step.obs
-            if i > self.start_timesteps and i % self.update_freq == 0:
+            if i % self.update_freq == 0 and self.replay_buffer.size > self.batch_size:
                 for _ in range(self.update_freq):
                     rng, update_rng = jax.random.split(rng)
                     sample = self.replay_buffer.sample(self.batch_size, rng=rng)

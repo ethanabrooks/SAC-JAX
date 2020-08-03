@@ -43,6 +43,8 @@ class ReplayBuffer(object):
 
     def sample(self, batch_size: int, rng: jnp.ndarray) -> Sample:
         """Given a JAX PRNG key, sample batch from memory."""
+        if self.size < batch_size:
+            raise RuntimeError
         ind = jax.random.randint(rng, (batch_size,), 0, self.size)
 
         return Sample(
