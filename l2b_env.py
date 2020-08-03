@@ -8,6 +8,7 @@ import numpy as np
 from debug_env import DebugEnv
 from replay_buffer import ReplayBuffer, BufferItem
 from trainer import Trainer, Loops
+from gym.utils.seeding import np_random
 
 
 class CatObsSpace(gym.ObservationWrapper):
@@ -50,6 +51,7 @@ class L2bEnv(Trainer, gym.Env):
     def seed(self, seed=None):
         seed = seed or 0
         self.rng = jax.random.PRNGKey(seed)
+        self.np_random, _ = np_random(seed)
 
     def get_context_space(self):
         obs = self.env.observation_space

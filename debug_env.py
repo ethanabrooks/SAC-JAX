@@ -16,13 +16,17 @@ class DebugEnv(gym.Env):
         # self.acceptable = np.random.random(levels)
         self.acceptable = np.random.random()
         self.iterator = None
-        self.random, _ = np_random(0)
+        self.np_random, _ = np_random(0)
         self.observation_space = gym.spaces.Box(low=np.zeros(1), high=np.zeros(1))
         self.action_space = gym.spaces.Box(low=np.zeros(1), high=np.ones(1))
         self._max_episode_steps = 2
 
     def seed(self, seed=None):
-        self.random, _ = np_random(seed)
+        self.np_random, _ = np_random(seed)
+
+    @property
+    def random(self):
+        return self.np_random
 
     def generator(self):
         s = np.zeros(1)

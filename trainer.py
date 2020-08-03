@@ -67,6 +67,8 @@ class Trainer:
 
         self.env = self.make_env()
         self.env.seed(seed)
+        self.env.action_space.np_random.seed(seed)
+        self.env.observation_space.np_random.seed(seed)
         self.max_action = self.env.action_space.high
         self.min_action = self.env.action_space.low
         self.action_dim = int(np.prod(self.env.action_space.shape))
@@ -199,11 +201,10 @@ class Trainer:
             self.env.action_space.shape,
             max_size=self.replay_size,
         )
+        sample_obs = self.env.observation_space.sample()
         loop = Loops(
             env=self.env_loop(),
-            train=self.agent.train_loop(
-                rng, sample_obs=self.env.observation_space.sample()
-            ),
+            train=self.agent.train_loop(rng, sample_obs=sample_obs),
         )
         next(loop.env)
         params = next(loop.train)
@@ -251,7 +252,7 @@ class Trainer:
         # print(f"Selected policy has an average score of: {evaluations[-1]:.3f}")
 
     def make_env(self):
-        return TimeLimit(DebugEnv(), max_episode_steps=2)  # TODO: gym.make(self.env_id)
+        return gym.make(self.env_id)
 
     def eval_policy(self, params) -> float:
         eval_env = self.make_env()
