@@ -76,7 +76,7 @@ class L2bEnv(Trainer, gym.Env):
         self.rng, rng = jax.random.split(self.rng)
         self.iterator = self._generator(rng)
         s, _, _, _ = next(self.iterator)
-        # assert self.observation_space.contains(s)
+        assert self.observation_space.contains(s)
         return s
 
     def _generator(self, rng,) -> Generator:
