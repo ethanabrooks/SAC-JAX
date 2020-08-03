@@ -79,7 +79,7 @@ l2b_search.update(
     outer_max_timesteps=4000,
 )
 debug_l2b = dict(
-    context_length=50,
+    context_length=2,
     sample_done_prob=0,
     update_freq=1,
     **dict(copy_args(pendulum, "inner_")),
