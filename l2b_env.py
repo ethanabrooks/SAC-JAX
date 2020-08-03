@@ -87,6 +87,7 @@ class L2bEnv(Trainer, gym.Env):
             ),
         )
         params = next(loop.train)
+        self.report(new_params=1)
         s = next(loop.env)
         c = np.stack(list(self.get_context(params)))
         r = 0
