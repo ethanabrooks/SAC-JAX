@@ -6,7 +6,7 @@ import jax
 import numpy as np
 
 from debug_env import DebugEnv
-from replay_buffer import ReplayBuffer, BufferItem
+from replay_buffer import ReplayBuffer, Sample
 from trainer import Trainer, Loops
 from gym.utils.seeding import np_random
 
@@ -132,13 +132,13 @@ class DoubleReplayBuffer(ReplayBuffer):
         self.sample_done_prob = sample_done_prob
         self.done_buffer = ReplayBuffer(**kwargs)
 
-    def add(self, item: BufferItem) -> None:
+    def add(self, item: Sample) -> None:
         if item.not_done:
             super().add(item)
         else:
             self.done_buffer.add(item)
 
-    def sample(self, *args, rng, **kwargs) -> BufferItem:
+    def sample(self, *args, rng, **kwargs) -> Sample:
         if jax.random.choice(
             rng, 2, p=[1 - self.sample_done_prob, self.sample_done_prob]
         ):

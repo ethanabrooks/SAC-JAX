@@ -20,7 +20,7 @@ import configs
 from agent import Agent
 from args import add_arguments
 from debug_env import DebugEnv
-from replay_buffer import ReplayBuffer, BufferItem
+from replay_buffer import ReplayBuffer, Sample
 
 OptState = Any
 
@@ -141,7 +141,7 @@ class Trainer:
 
     def env_loop(
         self, env=None, max_timesteps=None
-    ) -> Generator[BufferItem, jnp.ndarray, None]:
+    ) -> Generator[Sample, jnp.ndarray, None]:
         env = env or self.env
         max_timesteps = max_timesteps or self.max_timesteps
         obs, done = env.reset(), False
@@ -161,7 +161,7 @@ class Trainer:
             steps = env._max_episode_steps
             done_bool = float(done) if episode_timesteps < steps else 0
 
-            action = yield BufferItem(
+            action = yield Sample(
                 obs=obs,
                 action=action,
                 next_obs=next_obs,
