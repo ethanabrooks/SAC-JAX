@@ -132,11 +132,11 @@ class DoubleReplayBuffer(ReplayBuffer):
         self.sample_done_prob = sample_done_prob
         self.done_buffer = ReplayBuffer(**kwargs)
 
-    def add(self, item: Sample) -> None:
-        if item.not_done:
-            super().add(item)
+    def add(self, sample: Sample) -> None:
+        if sample.done:
+            self.done_buffer.add(sample)
         else:
-            self.done_buffer.add(item)
+            super().add(sample)
 
     def sample(self, *args, rng, **kwargs) -> Sample:
         if jax.random.choice(

@@ -145,7 +145,7 @@ class Agent(object):
         action: np.ndarray,
         next_obs: np.ndarray,
         reward: np.ndarray,
-        not_done: np.ndarray,
+        done: np.ndarray,
         rng: jnp.ndarray,
     ) -> jnp.DeviceArray:
         """
@@ -173,7 +173,7 @@ class Agent(object):
             # obtain an equivalent update.
             next_q = next_q_1
         # Cut the gradient from flowing through the target critic. This is more efficient, computationally.
-        target_q = jax.lax.stop_gradient(reward + self.discount * next_q * not_done)
+        target_q = jax.lax.stop_gradient(reward + self.discount * next_q * (1 - done))
         q_1, q_2 = self.critic.apply(critic_params, obs, action)
 
         return jnp.mean(rlax.l2_loss(q_1, target_q) + rlax.l2_loss(q_2, target_q))

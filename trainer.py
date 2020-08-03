@@ -164,7 +164,7 @@ class Trainer:
                 action=action,
                 next_obs=next_obs,
                 reward=reward,
-                not_done=1 - done_bool,
+                done=done_bool,
             )
 
             obs = next_obs
