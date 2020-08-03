@@ -110,6 +110,14 @@ class L2bEnv(Trainer, gym.Env):
                 for _ in range(self.update_freq):
                     rng, update_rng = jax.random.split(rng)
                     sample = self.replay_buffer.sample(self.batch_size, rng=rng)
+                    self.report(
+                        actor_linear_b=params["actor/linear"].b.mean().item(),
+                        actor_linear_w=params["actor/linear"].w.mean().item(),
+                        actor_linear_1_b=params["actor/linear_1"].b.mean().item(),
+                        actor_linear_1_w=params["actor/linear_1"].w.mean().item(),
+                        actor_linear_2_b=params["actor/linear_2"].b.mean().item(),
+                        actor_linear_2_w=params["actor/linear_2"].w.mean().item(),
+                    )
                     params = loop.train.send(sample)
 
                 c = np.stack(list(self.get_context(params)))
