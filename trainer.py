@@ -139,7 +139,7 @@ class Trainer:
 
     def env_loop(
         self, env=None, max_timesteps=None
-    ) -> Generator[Sample, jnp.ndarray, None]:
+    ) -> Generator[Step, jnp.ndarray, None]:
         env = env or self.env
         max_timesteps = max_timesteps or self.max_timesteps
         obs, done = env.reset(), False
