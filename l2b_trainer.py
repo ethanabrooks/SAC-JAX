@@ -43,7 +43,6 @@ class L2bTrainer(Trainer):
                 env_id=None,
                 use_tune=use_tune,
             )
-
             cls(**outer_args, inner_args=inner_args).train()
 
         run(**config)
@@ -69,30 +68,41 @@ class L2bTrainer(Trainer):
 
 
 class DoubleArgumentParser(argparse.ArgumentParser):
-    def add_argument(self, *args, double=True, **kwargs):
+    def __init__(self, *args, single_list, **kwargs):
+        self.single_list = single_list + ["-h", "--help"]
+        super().__init__(*args, **kwargs)
+
+    def add_argument(self, *args, **kwargs):
         name, *args = args
-        if double and name.startswith("--"):
-            pattern = re.compile(r"--(.*)")
-            name1 = pattern.sub(r"--inner-\1", name)
-            super().add_argument(name1, *args, **kwargs)
-            name2 = pattern.sub(r"--outer-\1", name)
-            super().add_argument(name2, *args, **kwargs)
-        else:
+        if name in self.single_list:
             super().add_argument(name, *args, **kwargs)
+        else:
+            pattern = re.compile(r"(?:--)?(.*)")
+            name = pattern.match(name).group(1)
+            name1 = "--inner-" + name
+            super().add_argument(name1, *args, **kwargs)
+            name2 = "--outer-" + name
+            super().add_argument(name2, *args, **kwargs)
 
 
 if __name__ == "__main__":
-    PARSER = DoubleArgumentParser(conflict_handler="resolve")
-    PARSER.add_argument("config", double=False)
-    PARSER.add_argument(
-        "--no-tune", dest="use_tune", action="store_false", double=False
+    PARSER = DoubleArgumentParser(
+        conflict_handler="resolve",
+        single_list=[
+            "config",
+            "--no-tune",
+            "--num-samples",
+            "--name",
+            "--best",
+            "--sample-done-prob",
+            "--update-freq",
+            "--context-length",
+            "--max-episode-steps",
+        ],
     )
-    PARSER.add_argument("--num-samples", type=int, double=False)
-    PARSER.add_argument("--name", double=False)
-    PARSER.add_argument("--best", double=False)
-    PARSER.add_argument("--sample-done-prob", type=float, default=0.3, double=False)
-    PARSER.add_argument("--update-freq", type=int, default=1, double=False)
-    PARSER.add_argument("--context-length", type=int, default=100, double=False)
-    PARSER.add_argument("--max-episode-steps", type=int, default=10000, double=False)
+    PARSER.add_argument("--sample-done-prob", type=float, default=0.3)
+    PARSER.add_argument("--update-freq", type=int, default=1)
+    PARSER.add_argument("--context-length", type=int, default=100)
+    PARSER.add_argument("--max-episode-steps", type=int, default=10000)
     add_arguments(PARSER)
     L2bTrainer.main(**vars(PARSER.parse_args()))

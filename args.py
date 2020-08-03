@@ -40,3 +40,8 @@ def add_arguments(parser):
     # TODO: Model saving and loading is not supported yet.
     # parser.add_argument("--save_model", action="store-true")  # Save model and optimizer parameters
     # parser.add_argument("--load-model", default="")  # Model load file name, "" doesn't load, "default" uses file_name
+    parser.add_argument("config")
+    parser.add_argument("--best")
+    parser.add_argument("--name")
+    parser.add_argument("--num-samples", type=int)
+    parser.add_argument("--no-tune", dest="use_tune", action="store_false")
