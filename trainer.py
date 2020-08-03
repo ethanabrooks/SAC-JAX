@@ -87,7 +87,17 @@ class Trainer:
         cls(**config).train()
 
     @classmethod
-    def main(cls, config, best, use_tune, num_samples, name, **kwargs):
+    def main(
+        cls,
+        config,
+        best,
+        use_tune,
+        num_samples,
+        name,
+        gpus_per_trial,
+        cpus_per_trial,
+        **kwargs,
+    ):
         config = configs.get_config(config)
         config.update(use_tune=use_tune)
         for k, v in kwargs.items():
@@ -97,27 +107,25 @@ class Trainer:
             local_mode = num_samples is None
             ray.init(webui_host="127.0.0.1", local_mode=local_mode)
             metric = "final_reward"
+
+            def run(c):
+                return cls.run(c)
+
+            resources_per_trial = {"gpu": gpus_per_trial, "cpu": cpus_per_trial}
             kwargs = dict()
             if not local_mode:
                 points_to_evaluate = None if best is None else [getattr(configs, best)]
                 kwargs = dict(
                     search_alg=HyperOptSearch(
-                        config,
-                        metric=metric,
-                        mode="max",
-                        points_to_evaluate=points_to_evaluate,
+                        config, metric=metric, points_to_evaluate=points_to_evaluate
                     ),
                     num_samples=num_samples,
                 )
-
-            def run(c):
-                return cls.run(c)
-
             tune.run(
                 run,
                 name=name,
                 config=config,
-                resources_per_trial={"gpu": 1, "cpu": 2},
+                resources_per_trial=resources_per_trial,
                 **kwargs,
             )
         else:

@@ -98,11 +98,12 @@ if __name__ == "__main__":
             "--update-freq",
             "--context-length",
             "--max-episode-steps",
+            "--cpus-per-trial",
+            "--gpus-per-trial",
         ],
     )
     PARSER.add_argument("--sample-done-prob", type=float, default=0.3)
     PARSER.add_argument("--update-freq", type=int, default=1)
     PARSER.add_argument("--context-length", type=int, default=100)
-    PARSER.add_argument("--max-episode-steps", type=int, default=10000)
     add_arguments(PARSER)
     L2bTrainer.main(**vars(PARSER.parse_args()))
