@@ -6,7 +6,7 @@ import jax
 import numpy as np
 
 from debug_env import DebugEnv
-from replay_buffer import ReplayBuffer, BufferItem
+from replay_buffer import ReplayBuffer, Sample
 from trainer import Trainer, Loops
 
 
@@ -91,13 +91,23 @@ class L2bEnv(Trainer, gym.Env):
         s = next(loop.env)
         c = np.stack(list(self.get_context(params)))
         r = 0
+
+        episode_reward = 0
+        episode_timesteps = 0
+        episode_num = 0
         for i in itertools.count():
             t = i == self.max_timesteps
             # r = self.eval_policy(params) if t else 0
             action = yield (s, c), r, t, {}
             step = loop.env.send(action)
             r = self.eval_policy(params) if t else step.reward  # TODO
-            self.replay_buffer.add(step)
+            self.replay_buffer.add(
+                obs=step.obs,
+                action=step.action,
+                next_obs=step.next_obs,
+                reward=step.reward,
+                not_done=1 - float(step.done),
+            )
             s = step.obs
             if i > self.start_timesteps and i % self.update_freq == 0:
                 for _ in range(self.update_freq):
@@ -106,6 +116,20 @@ class L2bEnv(Trainer, gym.Env):
                     params = loop.train.send(sample)
 
                 c = np.stack(list(self.get_context(params)))
+
+            episode_timesteps += 1
+            episode_reward += step.reward
+            if step.done:
+                # +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
+                self.report(
+                    timestep=t + 1,
+                    episode=episode_num + 1,
+                    episode_timestep=episode_timesteps,
+                    reward=episode_reward,
+                )
+                episode_reward = 0
+                episode_timesteps = 0
+                episode_num += 1
 
     def get_context(self, params):
         env_loop = self.env_loop(env=self.make_env(), max_timesteps=self.context_length)
@@ -130,13 +154,13 @@ class DoubleReplayBuffer(ReplayBuffer):
         self.sample_done_prob = sample_done_prob
         self.done_buffer = ReplayBuffer(**kwargs)
 
-    def add(self, item: BufferItem) -> None:
-        if item.not_done:
-            super().add(item)
+    def add(self, not_done, **kwargs) -> None:
+        if not_done:
+            super().add(**kwargs, not_done=not_done)
         else:
-            self.done_buffer.add(item)
+            self.done_buffer.add(**kwargs, not_done=not_done)
 
-    def sample(self, *args, rng, **kwargs) -> BufferItem:
+    def sample(self, *args, rng, **kwargs) -> Sample:
         if jax.random.choice(
             rng, 2, p=[1 - self.sample_done_prob, self.sample_done_prob]
         ):
