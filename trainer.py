@@ -12,27 +12,15 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import ray
-from gym.wrappers import TimeLimit
 from ray import tune
 from ray.tune.suggest.hyperopt import HyperOptSearch
 
 import configs
 from agent import Agent
 from args import add_arguments
-from debug_env import DebugEnv
-from replay_buffer import ReplayBuffer, Sample
+from replay_buffer import ReplayBuffer, Sample, Step
 
 OptState = Any
-
-
-@dataclass
-class Step:
-    T = np.ndarray
-    obs: T
-    action: T
-    next_obs: T
-    reward: T
-    done: bool
 
 
 @dataclass
@@ -171,7 +159,7 @@ class Trainer:
             steps = env._max_episode_steps
             done_bool = float(done) if episode_timesteps < steps else 0
 
-            action = yield Sample(
+            action = yield Step(
                 obs=obs,
                 action=action,
                 next_obs=next_obs,

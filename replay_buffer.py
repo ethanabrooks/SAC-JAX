@@ -16,6 +16,11 @@ class Sample:
     not_done: T
 
 
+@dataclass
+class Step(Sample):
+    pass
+
+
 class ReplayBuffer(object):
     """A simple container for maintaining the history of the agent."""
 
