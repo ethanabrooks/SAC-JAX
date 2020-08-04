@@ -96,9 +96,11 @@ debug_l2b = dict(
 l2b_debug_env = get_config("l2b-debug-env")
 l2b_debug_search = dict(**l2b_debug_env)
 l2b_debug_search.update(
-    context_length=hp.choice("context_length", [1, 2]),
+    context_length=hp.choice("context_length", [1, 2, 5, 10]),
     sample_done_prob=hp.choice("sample_done_prob", [0.1, 0.3, 0.5]),
     update_freq=hp.choice("update_freq", [1, 10, 50]),
+    inner_max_timesteps=500,
+    outer_max_timesteps=20000,
     **dict(copy_args(search, "outer_")),
 )
 configs = dict(
