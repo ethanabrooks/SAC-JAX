@@ -48,14 +48,23 @@ pendulum = {
     "start_timesteps": 10,
 }
 debug4 = get_config("debug4")
-debug_l2b = dict(
+l2b_pendulum = dict(
     context_length=2,
     sample_done_prob=0,
     update_freq=2,  # TODO
     **dict(copy_args(pendulum, "inner_")),
     **dict(copy_args(pendulum, "outer_")),
 )
-debug_l2b.update(inner_max_timesteps=15000, outer_max_timesteps=15000)
+l2b_pendulum.update(inner_max_timesteps=15000, outer_max_timesteps=15000)
+debug_l2b = dict(
+    context_length=2,
+    sample_done_prob=0,
+    update_freq=1,
+    **dict(copy_args(debug4, "inner_")),
+    **dict(copy_args(debug4, "outer_")),
+)
+debug_l2b.update(inner_max_timesteps=1000, outer_max_timesteps=1000)
+
 search = dict(
     batch_size=hp.choice("batch_size", medium_values(6, 10)),
     expl_noise=hp.choice("expl_noise", small_values(1, 3)),
@@ -91,5 +100,6 @@ configs = dict(
     pendulum=pendulum,
     debug4=debug4,
     l2b_search=l2b_search,
+    l2b_pendulum=l2b_pendulum,
     debug_l2b=debug_l2b,
 )
