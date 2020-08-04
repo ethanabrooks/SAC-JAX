@@ -38,7 +38,7 @@ pendulum = {
     "eval_freq": 5000.0,
     "expl_noise": 0.01,
     "lr": 0.001,
-    "max_timesteps": 15000,
+    "max_timesteps": 30000,
     "noise_clip": 0.01,
     "policy": "TD3",
     "policy_freq": 1,

@@ -21,7 +21,9 @@ class L2bTrainer(Trainer):
 
     @classmethod
     def run(cls, config: dict):
-        def run(context_length, sample_done_prob, update_freq, use_tune, **kwargs):
+        def run(
+            context_length, sample_done_prob, update_freq, use_tune, alpha, **kwargs
+        ):
             inner = re.compile(r"^inner_(.*)")
             outer = re.compile(r"^outer_(.*)")
 
@@ -35,6 +37,7 @@ class L2bTrainer(Trainer):
                 context_length=context_length,
                 update_freq=update_freq,
                 use_tune=use_tune,
+                alpha=alpha,
             )
             outer_args = dict(
                 **dict(get_args(outer)),
@@ -97,6 +100,7 @@ if __name__ == "__main__":
         conflict_handler="resolve",
         single_list=[
             "config",
+            "--alpha",
             "--no-tune",
             "--num-samples",
             "--name",
@@ -112,5 +116,6 @@ if __name__ == "__main__":
     PARSER.add_argument("--sample-done-prob", type=float, default=0.3)
     PARSER.add_argument("--update-freq", type=int, default=1)
     PARSER.add_argument("--context-length", type=int, default=100)
+    PARSER.add_argument("--alpha", type=float, default=0.1)
     add_arguments(PARSER)
     L2bTrainer.main(**vars(PARSER.parse_args()))
