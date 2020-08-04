@@ -19,6 +19,7 @@ import configs
 from agent import Agent
 from args import add_arguments
 from replay_buffer import ReplayBuffer, Sample, Step
+from debug_env import DebugEnv
 
 OptState = Any
 
@@ -269,7 +270,8 @@ class Trainer:
         )
 
     def make_env(self):
-        return gym.make(self.env_id)
+        return DebugEnv()
+        # return gym.make(self.env_id)
 
     def eval_policy(self, params) -> float:
         eval_env = self.make_env()
