@@ -81,6 +81,7 @@ l2b_debug_search = dict(
     context_length=2,
     sample_done_prob=0,
     update_freq=10000,  # TODO
+    outer_max_timesteps=1000,
     **dict(copy_args(search, "inner_")),
     **dict(copy_args(search, "outer_")),
 )
