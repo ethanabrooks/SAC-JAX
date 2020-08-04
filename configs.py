@@ -77,7 +77,7 @@ l2b_search = dict(
 )
 l2b_search.update(
     inner_env_id="Pendulum-v0",
-    inner_max_timesteps=hp.choice("inner_max_timesteps", [200, 500, 1000, 1500]),
+    inner_max_timesteps=hp.choice("inner_max_timesteps", [15000, 30000, 45000]),
     outer_max_timesteps=4000,
 )
 debug_l2b = dict(

@@ -113,7 +113,6 @@ class L2bEnv(Trainer, gym.Env):
                     actor_linear_1_w=params["actor/linear_1"].w.mean().item(),
                     actor_linear_2_b=params["actor/linear_2"].b.mean().item(),
                     actor_linear_2_w=params["actor/linear_2"].w.mean().item(),
-                    eval_reward=self.eval_policy(params),
                 )
             if t % 1000 == 0:
                 self.report(eval_reward=self.eval_policy(params))
