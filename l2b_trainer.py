@@ -73,6 +73,9 @@ class L2bTrainer(Trainer):
             sample_done_prob=self.sample_done_prob,
         )
 
+    def eval_policy(self, params) -> float:
+        return 1
+
 
 class DoubleArgumentParser(argparse.ArgumentParser):
     def __init__(self, *args, single_list, **kwargs):

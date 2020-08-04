@@ -245,7 +245,7 @@ class Trainer:
                 params = loop.train.send(sample)
             step = loop.env.send(action)
 
-        # self.report(final_reward=self.eval_policy(params))
+        self.report(final_reward=self.eval_policy(params))
         return
 
         # Evaluate episode
