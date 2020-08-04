@@ -47,7 +47,6 @@ pendulum = {
     "seed": 3,
     "start_timesteps": 10,
 }
-debug4 = get_config("debug4")
 search = dict(
     batch_size=hp.choice("batch_size", medium_values(6, 10)),
     expl_noise=hp.choice("expl_noise", small_values(1, 3)),
@@ -95,7 +94,6 @@ debug_l2b = dict(
 configs = dict(
     search=search,
     pendulum=pendulum,
-    debug4=debug4,
     l2b_search=l2b_search,
     debug_l2b=debug_l2b,
     l2b_debug_search=l2b_debug_search,
