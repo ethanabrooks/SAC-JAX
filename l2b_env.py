@@ -102,18 +102,18 @@ class L2bEnv(Trainer, gym.Env):
                     rng, update_rng = jax.random.split(rng)
                     sample = self.replay_buffer.sample(self.batch_size, rng=rng)
                     params = loop.train.send(sample)
-                # con = np.stack(list(self.get_context(params)))
+                con = np.stack(list(self.get_context(params)))
 
-                self.report(
-                    actor_linear_b=params["actor/linear"].b.mean().item(),
-                    actor_linear_w=params["actor/linear"].w.mean().item(),
-                    actor_linear_1_b=params["actor/linear_1"].b.mean().item(),
-                    actor_linear_1_w=params["actor/linear_1"].w.mean().item(),
-                    actor_linear_2_b=params["actor/linear_2"].b.mean().item(),
-                    actor_linear_2_w=params["actor/linear_2"].w.mean().item(),
-                )
-            if t % 1000 == 0:
-                self.report(eval_reward=self.eval_policy(params))
+                if (t + 1) % (self.update_freq * 100) == 0:
+                    self.report(eval_reward=self.eval_policy(params))
+                    self.report(
+                        actor_linear_b=params["actor/linear"].b.mean().item(),
+                        actor_linear_w=params["actor/linear"].w.mean().item(),
+                        actor_linear_1_b=params["actor/linear_1"].b.mean().item(),
+                        actor_linear_1_w=params["actor/linear_1"].w.mean().item(),
+                        actor_linear_2_b=params["actor/linear_2"].b.mean().item(),
+                        actor_linear_2_w=params["actor/linear_2"].w.mean().item(),
+                    )
 
         yield obs, self.eval_policy(params), True, {}
 
