@@ -67,9 +67,10 @@ outer_search = dict(
     outer_start_timesteps=1,
 )
 l2b_search = dict(
-    context_length=hp.choice("context_length", [40, 50, 60]),
+    inner_max_timesteps=hp.choice("inner_max_timesteps", [10000, 15000, 20000]),
+    context_length=hp.choice("context_length", [20, 50, 10]),
     sample_done_prob=hp.choice("sample_done_prob", [0.1, 0.3, 0.5]),
-    update_freq=hp.choice("update_freq", [40, 50, 75, 100]),
+    update_freq=hp.choice("update_freq", [5, 10, 20, 50]),
     inner_env_id=None,
     **dict(copy_args(search, "inner_")),
     **outer_search,
