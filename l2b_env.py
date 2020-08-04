@@ -31,8 +31,9 @@ class CatObsSpace(gym.ObservationWrapper):
 
 
 class L2bEnv(Trainer, gym.Env):
-    def __init__(self, update_freq, context_length, *args, **kwargs):
-        super().__init__(*args, env_id=None, **kwargs)
+    def __init__(self, update_freq, context_length, alpha, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.alpha = alpha
         self.update_freq = update_freq
         self.context_length = context_length
         self.iterator = None
@@ -93,24 +94,29 @@ class L2bEnv(Trainer, gym.Env):
         step = loop.env.send(self.env.action_space.sample())
         for t in range(self.max_timesteps) if self.max_timesteps else itertools.count():
             self.replay_buffer.add(step)
-            action = yield (step.obs, con), step.reward, step.done, {}
+            obs = step.obs, con
+            action = yield obs, step.reward, False, {}
             step = loop.env.send(action)
             if (t + 1) % self.update_freq == 0:
                 for _ in range(self.update_freq):
                     rng, update_rng = jax.random.split(rng)
                     sample = self.replay_buffer.sample(self.batch_size, rng=rng)
                     params = loop.train.send(sample)
-
-                self.report(
-                    actor_linear_b=params["actor/linear"].b.mean().item(),
-                    actor_linear_w=params["actor/linear"].w.mean().item(),
-                    actor_linear_1_b=params["actor/linear_1"].b.mean().item(),
-                    actor_linear_1_w=params["actor/linear_1"].w.mean().item(),
-                    actor_linear_2_b=params["actor/linear_2"].b.mean().item(),
-                    actor_linear_2_w=params["actor/linear_2"].w.mean().item(),
-                )
-
                 con = np.stack(list(self.get_context(params)))
+
+                if (t + 1) % (self.update_freq * 100) == 0:
+                    self.report(eval_reward=self.eval_policy(params))
+                    self.report(
+                        actor_linear_b=params["actor/linear"].b.mean().item(),
+                        actor_linear_w=params["actor/linear"].w.mean().item(),
+                        actor_linear_1_b=params["actor/linear_1"].b.mean().item(),
+                        actor_linear_1_w=params["actor/linear_1"].w.mean().item(),
+                        actor_linear_2_b=params["actor/linear_2"].b.mean().item(),
+                        actor_linear_2_w=params["actor/linear_2"].w.mean().item(),
+                    )
+
+        obs = step.obs, con
+        yield obs, self.eval_policy(params), True, {}
 
     def get_context(self, params):
         env_loop = self.env_loop(env=self.make_env())

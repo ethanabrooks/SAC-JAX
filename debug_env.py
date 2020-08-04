@@ -12,9 +12,12 @@ class DebugEnv(gym.Env):
     def __init__(self):
         # , levels: int, dim: int, tol: float, seed: int):
         # self.tol = tol
-        self.iterator = None
+        # self.embeddings = np.random.random((levels, dim))
+        # self.acceptable = np.random.random(levels)
         self.random, _ = np_random(0)
         self.acceptable = self.random.random()
+        self.iterator = None
+        self.random, _ = np_random(0)
         self.observation_space = gym.spaces.Box(low=np.zeros(1), high=np.zeros(1))
         self.action_space = gym.spaces.Box(low=np.zeros(1), high=np.ones(1))
         self._max_episode_steps = 2
