@@ -291,7 +291,6 @@ class Trainer:
 
         avg_reward /= self.eval_episodes
 
-        self.report(eval_reward=avg_reward)
         return avg_reward
 
 
