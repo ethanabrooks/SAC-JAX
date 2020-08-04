@@ -92,15 +92,10 @@ debug_l2b = dict(
     **dict(copy_args(pendulum, "inner_")),
     **dict(copy_args(pendulum, "outer_")),
 )
-l2b_debug_env = get_config("l2b-debug-env")
-l2b_debug_env.update(
-    outer_seed=hp.randint("outer_seed", 20), inner_seed=hp.randint("inner_seed", 20),
-)
 configs = dict(
     search=search,
     pendulum=pendulum,
     l2b_search=l2b_search,
     debug_l2b=debug_l2b,
     l2b_debug_search=l2b_debug_search,
-    l2b_debug_env=l2b_debug_env,
 )
