@@ -104,7 +104,7 @@ class L2bEnv(Trainer, gym.Env):
                     params = loop.train.send(sample)
                 con = np.stack(list(self.get_context(params)))
 
-                if (t + 1) % (self.update_freq * 100) == 0:
+                if (t + 1) % self.update_freq == 0:
                     self.report(eval_reward=self.eval_policy(params))
                     self.report(
                         actor_linear_b=params["actor/linear"].b.mean().item(),
