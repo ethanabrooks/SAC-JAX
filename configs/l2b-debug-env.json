@@ -19,7 +19,7 @@
   "outer_eval_freq": 5000.0,
   "outer_expl_noise": 0.05,
   "outer_lr": 0.0001,
-  "outer_max_timesteps": 5000,
+  "outer_max_timesteps": 10000,
   "outer_noise_clip": 0.01,
   "outer_policy": "TD3",
   "outer_policy_freq": 3,
