@@ -14,7 +14,8 @@ class DebugEnv(gym.Env):
         # self.tol = tol
         # self.embeddings = np.random.random((levels, dim))
         # self.acceptable = np.random.random(levels)
-        self.acceptable = np.random.random()
+        self.random, _ = np_random(0)
+        self.acceptable = self.random.random()
         self.iterator = None
         self.random, _ = np_random(0)
         self.observation_space = gym.spaces.Box(low=np.zeros(1), high=np.zeros(1))
@@ -23,6 +24,7 @@ class DebugEnv(gym.Env):
 
     def seed(self, seed=None):
         self.random, _ = np_random(seed)
+        self.acceptable = self.random.random()
 
     def generator(self):
         s = np.zeros(1)

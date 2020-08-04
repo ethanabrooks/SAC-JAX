@@ -115,6 +115,7 @@ class L2bEnv(Trainer, gym.Env):
                         actor_linear_2_w=params["actor/linear_2"].w.mean().item(),
                     )
 
+        obs = step.obs, con
         yield obs, self.alpha * self.eval_policy(params), True, {}
 
     def get_context(self, params):
