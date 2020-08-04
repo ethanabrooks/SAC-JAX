@@ -94,10 +94,8 @@ class L2bEnv(Trainer, gym.Env):
         step = loop.env.send(self.env.action_space.sample())
         for t in range(self.max_timesteps) if self.max_timesteps else itertools.count():
             self.replay_buffer.add(step)
-            done = t == self.max_timesteps
-            reward = self.eval_policy(params) if done else step.reward
             obs = step.obs, con
-            action = yield obs, reward, done, {}
+            action = yield obs, step.reward, False, {}
             step = loop.env.send(action)
             if (t + 1) % self.update_freq == 0:
                 for _ in range(self.update_freq):
@@ -116,6 +114,8 @@ class L2bEnv(Trainer, gym.Env):
                 )
             if t % 1000 == 0:
                 self.report(eval_reward=self.eval_policy(params))
+
+        yield obs, self.eval_policy(params), True, {}
 
     def get_context(self, params):
         env_loop = self.env_loop(env=self.make_env())
