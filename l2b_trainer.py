@@ -17,7 +17,9 @@ class L2bTrainer(Trainer):
         super().__init__(**outer_args, env_id=env_id)
 
     def report(self, **kwargs):
-        super().report(**{"outer_" + k: v for k, v in kwargs.items()})
+        super().report(
+            **{k if k == "final_reward" else "outer_" + k: v for k, v in kwargs.items()}
+        )
 
     @classmethod
     def run(cls, config: dict):
@@ -75,6 +77,9 @@ class L2bTrainer(Trainer):
             max_size=self.replay_size,
             sample_done_prob=self.sample_done_prob,
         )
+
+    def eval_policy(self, params) -> float:
+        return 1
 
 
 class DoubleArgumentParser(argparse.ArgumentParser):

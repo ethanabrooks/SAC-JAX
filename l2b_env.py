@@ -32,7 +32,7 @@ class CatObsSpace(gym.ObservationWrapper):
 
 class L2bEnv(Trainer, gym.Env):
     def __init__(self, update_freq, context_length, alpha, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, env_id=None, **kwargs)
         self.alpha = alpha
         self.update_freq = update_freq
         self.context_length = context_length
@@ -116,7 +116,7 @@ class L2bEnv(Trainer, gym.Env):
                     )
 
         obs = step.obs, con
-        yield obs, self.alpha * self.eval_policy(params), True, {}
+        yield obs, self.eval_policy(params), True, {}
 
     def get_context(self, params):
         env_loop = self.env_loop(env=self.make_env())

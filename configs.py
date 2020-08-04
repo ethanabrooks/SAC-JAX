@@ -84,22 +84,41 @@ outer_search = dict(
     outer_start_timesteps=1,
 )
 l2b_search = dict(
+    context_length=hp.choice("context_length", [40, 50, 60]),
+    sample_done_prob=hp.choice("sample_done_prob", [0.1, 0.3, 0.5]),
+    update_freq=hp.choice("update_freq", [40, 50, 75, 100]),
+    inner_env_id=None,
+    **dict(copy_args(search, "inner_")),
+    **outer_search,
+)
+l2b_search.update(
+    inner_max_timesteps=hp.choice("inner_max_timesteps", [200, 500, 1000, 1500]),
+    outer_max_timesteps=4000,
+)
+l2b_debug_search = dict(
     context_length=2,
     sample_done_prob=0,
-    update_freq=hp.choice("update_freq", [1, 2, 10, 15]),
+    update_freq=10000,  # TODO
+    outer_max_timesteps=1000,
+    **dict(copy_args(search, "inner_")),
+    **dict(copy_args(search, "outer_")),
+)
+debug_l2b = dict(
+    context_length=2,
+    sample_done_prob=0,
+    update_freq=10000,  # TODO
     **dict(copy_args(pendulum, "inner_")),
     **dict(copy_args(pendulum, "outer_")),
 )
-l2b_search.update(
-    inner_max_timesteps=15000,
-    outer_max_timesteps=15000,
-    lr=hp.choice("lr", [0.0005, 0.001, 0.002, 0.005,]),
+l2b_debug_env = get_config("l2b-debug-env")
+l2b_debug_env.update(
+    outer_seed=hp.randint("outer_seed", 20), inner_seed=hp.randint("inner_seed", 20),
 )
 configs = dict(
     search=search,
     pendulum=pendulum,
-    debug4=debug4,
     l2b_search=l2b_search,
-    l2b_pendulum=l2b_pendulum,
     debug_l2b=debug_l2b,
+    l2b_debug_search=l2b_debug_search,
+    l2b_debug_env=l2b_debug_env,
 )
