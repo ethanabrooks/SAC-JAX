@@ -36,10 +36,9 @@ class L2bEnv(Trainer, gym.Env):
         self.update_freq = update_freq
         self.context_length = context_length
         self.iterator = None
-        # self.observation_space = gym.spaces.Tuple(
-        #     [self.env.observation_space, self.get_context_space()]
-        # )
-        self.observation_space = self.env.observation_space
+        self.observation_space = gym.spaces.Tuple(
+            [self.env.observation_space, self.get_context_space()]
+        )
         self.action_space = self.env.action_space
         self.rng = jax.random.PRNGKey(0)
         self.replay_buffer = ReplayBuffer(
@@ -76,11 +75,12 @@ class L2bEnv(Trainer, gym.Env):
         self.rng, rng = jax.random.split(self.rng)
         self.iterator = self._generator(rng)
         s, _, _, _ = next(self.iterator)
-        # assert self.observation_space.contains(s)
+        assert self.observation_space.contains(s)
         return s
 
     def _generator(self, rng,) -> Generator:
-        replay_buffer = self.build_replay_buffer()
+        self.replay_buffer.size = 0
+        self.replay_buffer.ptr = 0
         loop = Loops(
             env=self.env_loop(report_loop=self.report_loop()),
             train=self.agent.train_loop(
@@ -89,32 +89,28 @@ class L2bEnv(Trainer, gym.Env):
         )
         next(loop.env)
         params = next(loop.train)
-
-        # Evaluate untrained policy.
-        # We evaluate for 100 episodes as 10 episodes provide a very noisy estimation in some domains.
-        # evaluations = [self.eval_policy(params)]  # TODO
-        # best_performance = evaluations[-1]
-        # best_actor_params = params
-        # if save_model: agent.save(f"./models/{policy}/{file_name}")
-
+        con = np.stack(list(self.get_context(params)))
         step = loop.env.send(self.env.action_space.sample())
         for t in range(self.max_timesteps) if self.max_timesteps else itertools.count():
-            replay_buffer.add(step)
-            action = yield step.obs, step.reward, step.done, {}
-            if t <= self.start_timesteps:
-                action = self.env.action_space.sample()
-            else:
-                # Select action randomly or according to policy
-                rng, noise_rng = jax.random.split(rng)
-                action = self.act(params, step.obs, noise_rng)
-
-                # Train agent after collecting sufficient data
-                rng, update_rng = jax.random.split(rng)
-                sample = replay_buffer.sample(self.batch_size, rng=rng)
-                params = loop.train.send(sample)
+            self.replay_buffer.add(step)
+            action = yield (step.obs, con), step.reward, step.done, {}
             step = loop.env.send(action)
+            if (t + 1) % self.update_freq == 0:
+                for _ in range(self.update_freq):
+                    rng, update_rng = jax.random.split(rng)
+                    sample = self.replay_buffer.sample(self.batch_size, rng=rng)
+                    params = loop.train.send(sample)
 
-        self.report(final_reward=self.eval_policy(params))
+                self.report(
+                    actor_linear_b=params["actor/linear"].b.mean().item(),
+                    actor_linear_w=params["actor/linear"].w.mean().item(),
+                    actor_linear_1_b=params["actor/linear_1"].b.mean().item(),
+                    actor_linear_1_w=params["actor/linear_1"].w.mean().item(),
+                    actor_linear_2_b=params["actor/linear_2"].b.mean().item(),
+                    actor_linear_2_w=params["actor/linear_2"].w.mean().item(),
+                )
+
+                con = np.stack(list(self.get_context(params)))
 
     def get_context(self, params):
         env_loop = self.env_loop(env=self.make_env())
