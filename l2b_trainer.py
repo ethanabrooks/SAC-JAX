@@ -121,6 +121,6 @@ if __name__ == "__main__":
     PARSER.add_argument("--sample-done-prob", type=float, default=0.3)
     PARSER.add_argument("--update-freq", type=int, default=1)
     PARSER.add_argument("--context-length", type=int, default=100)
-    PARSER.add_argument("--alpha", type=float, default=10)
+    PARSER.add_argument("--alpha", type=float, default=0.1)
     add_arguments(PARSER)
     L2bTrainer.main(**vars(PARSER.parse_args()))
