@@ -103,6 +103,8 @@ l2b_debug_search.update(
     outer_lr=hp.choice("outer_lr", small_values(3, 5)),
     outer_policy_freq=hp.choice("outer_policy_freq", [1, 2, 3]),
 )
+three_levels = get_config("3-levels")
+three_levels.update(seed=hp.randint("seed", 20), max_timesteps=None)
 configs = dict(
     search=search,
     pendulum=pendulum,
@@ -110,4 +112,5 @@ configs = dict(
     debug_l2b=debug_l2b,
     l2b_debug_search=l2b_debug_search,
     l2b_debug_env=l2b_debug_env,
+    three_levels=three_levels,
 )
