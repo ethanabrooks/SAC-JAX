@@ -304,5 +304,5 @@ if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
     add_arguments(PARSER)
     PARSER.add_argument("--std", type=float)
-    PARSER.add_argument("--levels", type=int)
+    PARSER.add_argument("--levels", type=int, required=True)
     Trainer.main(**vars(PARSER.parse_args()))
