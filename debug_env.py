@@ -14,6 +14,7 @@ class DebugEnv(gym.Env):
     ):
         self.std = std
         self.random, _ = np_random(0)
+        levels += 1
         self.embeddings = np.eye(levels)
         self.acceptable = self.random.random(levels)
         self.iterator = None
@@ -30,7 +31,8 @@ class DebugEnv(gym.Env):
     def generator(self):
         t = False
         r = 0
-        for embedding, acceptable in zip(self.embeddings[:-1], self.acceptable):
+        action = yield self.embeddings[0], r, False, {}
+        for embedding, acceptable in zip(self.embeddings[1:-1], self.acceptable):
 
             def render():
                 print(acceptable)
@@ -40,6 +42,7 @@ class DebugEnv(gym.Env):
             # normal = self.random.normal(scale=self.std)
             r = -abs(action - acceptable).item()
             # t = abs(normal) < diff
+        r = -abs(action - self.acceptable[-1]).item()
         yield self.embeddings[-1], r, True, {}
 
     def step(self, action):
