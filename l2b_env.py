@@ -72,7 +72,7 @@ class L2bEnv(Trainer, gym.Env):
         return gym.spaces.Box(low=low, high=high)
 
     def make_env(self):
-        return DebugEnv(levels=self.levels, dim=self.dim, std=self.std)
+        return DebugEnv(levels=self.levels, std=self.std)
 
     def step(self, action):
         return self.iterator.send(action)
