@@ -96,7 +96,10 @@ debug_l2b = dict(
 l2b_debug_env = get_config("l2b-debug-env")
 l2b_debug_search = dict(**l2b_debug_env)
 l2b_debug_search.update(
-    inner_max_timesteps=1000, outer_max_timesteps=25000, seed=hp.randint("seed", 20),
+    inner_max_timesteps=1000,
+    outer_max_timesteps=25000,
+    outer_seed=hp.randint("outer_seed", 20),
+    inner_seed=hp.randint("inner_seed", 20),
 )
 configs = dict(
     search=search,
