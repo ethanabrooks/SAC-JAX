@@ -29,13 +29,8 @@ class DebugEnv(gym.Env):
     def generator(self):
         r = 1 / len(self.embeddings)
         action = yield self.embeddings[0], r, False, {}
-        for embedding, acceptable in zip(self.embeddings[1:-1], self.acceptable):
-
-            def render():
-                print(acceptable)
-
-            self._render = render
-            t = self.random.random() < sigmoid(action.item())
+        for embedding in self.embeddings[1:-1]:
+            t = self.random.random() < sigmoid(float(action))
             action = yield embedding, r, t, {}
         yield self.embeddings[-1], r, True, {}
 
@@ -55,7 +50,7 @@ def play():
     env = DebugEnv(levels=100, std=100)
     _ = env.reset()
     while True:
-        env.render()
+        # env.render()
         action = float(input("go"))
         _, r, t, i = env.step(action)
         print("reward:", r)
