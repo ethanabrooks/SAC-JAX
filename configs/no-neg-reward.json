@@ -1,0 +1,19 @@
+{
+  "batch_size": 512,
+  "discount": 0.99,
+  "env_id": "Pendulum-v0",
+  "eval_freq": 100,
+  "expl_noise": 0.05,
+  "levels": 20,
+  "lr": 0.005,
+  "max_timesteps": 5000,
+  "noise_clip": 0.05,
+  "policy": "TD3",
+  "policy_freq": 1,
+  "policy_noise": 0.2,
+  "replay_size": 200000,
+  "seed": 14,
+  "start_timesteps": 50,
+  "std": null,
+  "use_tune": true
+}
