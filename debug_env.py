@@ -27,7 +27,7 @@ class DebugEnv(gym.Env):
 
     def generator(self):
         t = False
-        r = 1 / len(self.embeddings)
+        r = 0
         for embedding, acceptable in zip(self.embeddings[:-1], self.acceptable):
 
             def render():
@@ -36,7 +36,9 @@ class DebugEnv(gym.Env):
             self._render = render
             action = yield embedding, r, t, {}
             normal = self.random.normal(scale=self.std)
-            t = abs(normal) < abs(action - acceptable)
+            diff = abs(action - acceptable)
+            r = (1 - sigmoid(diff)) / len(self.embeddings)
+            t = abs(normal) < diff
         yield self.embeddings[-1], r, True, {}
 
     def step(self, action):
