@@ -228,9 +228,9 @@ class Trainer:
 
         # Evaluate untrained policy.
         # We evaluate for 100 episodes as 10 episodes provide a very noisy estimation in some domains.
-        # evaluations = [self.eval_policy(params)]  # TODO
-        # best_performance = evaluations[-1]
-        # best_actor_params = params
+        evaluations = []  # TODO
+        best_performance = None
+        best_actor_params = None
         # if save_model: agent.save(f"./models/{policy}/{file_name}")
 
         step = loop.env.send(self.env.action_space.sample())
@@ -249,22 +249,21 @@ class Trainer:
                 params = loop.train.send(sample)
             step = loop.env.send(action)
 
-        self.report(final_reward=self.eval_policy(params))
-        return
-
-        # Evaluate episode
-        # if (t + 1) % self.eval_freq == 0:
-        # evaluations.append(self.eval_policy(params))
-        # if evaluations[-1] > best_performance:
-        # best_performance = evaluations[-1]
-        # best_actor_params = params
-        # if save_model: agent.save(f"./models/{policy}/{file_name}")
+            # Evaluate episode
+            if (t + 1) % self.eval_freq == 0:
+                evaluations.append(self.eval_policy(params))
+                if best_performance is None or evaluations[-1] > best_performance:
+                    best_performance = evaluations[-1]
+                    best_actor_params = params
+                # if save_model: agent.save(f"./models/{policy}/{file_name}")
 
         # At the end, re-evaluate the policy which is presumed to be best. This ensures an un-biased estimator when
         # reporting the average best results across each run.
         # params = best_actor_params
         # evaluations.append(self.eval_policy(params))
         # print(f"Selected policy has an average score of: {evaluations[-1]:.3f}")
+        self.report(final_reward=self.eval_policy(params))
+        return
 
     def build_replay_buffer(self):
         return ReplayBuffer(
