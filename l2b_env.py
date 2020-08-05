@@ -8,7 +8,7 @@ import numpy as np
 
 from debug_env import DebugEnv
 from replay_buffer import ReplayBuffer, Sample, Step
-from trainer import Trainer, Loops, ReportData
+from trainer import Trainer, Loops
 
 
 class CatObsSpace(gym.ObservationWrapper):
@@ -31,7 +31,12 @@ class CatObsSpace(gym.ObservationWrapper):
 
 
 class L2bEnv(Trainer, gym.Env):
-    def __init__(self, update_freq, context_length, alpha, *args, **kwargs):
+    def __init__(
+        self, update_freq, context_length, alpha, levels, dim, std, *args, **kwargs
+    ):
+        self.std = std
+        self.dim = dim
+        self.levels = levels
         super().__init__(*args, env_id=None, **kwargs)
         self.alpha = alpha
         self.update_freq = update_freq
@@ -67,7 +72,7 @@ class L2bEnv(Trainer, gym.Env):
         return gym.spaces.Box(low=low, high=high)
 
     def make_env(self):
-        return DebugEnv()
+        return DebugEnv(levels=self.levels, dim=self.dim, std=self.std)
 
     def step(self, action):
         return self.iterator.send(action)

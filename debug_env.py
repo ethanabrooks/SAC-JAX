@@ -9,38 +9,26 @@ def sigmoid(x):
 
 
 class DebugEnv(gym.Env):
-    def __init__(self):
-        # , levels: int, dim: int, tol: float, seed: int):
-        # self.tol = tol
-        # self.embeddings = np.random.random((levels, dim))
-        # self.acceptable = np.random.random(levels)
+    def __init__(self, levels: int, dim: int, std: float):
+        self.std = std
         self.random, _ = np_random(0)
-        self.acceptable = self.random.random()
+        self.embeddings = self.random.random((levels, dim))
+        self.acceptable = self.random.random(levels)
         self.iterator = None
-        self.random, _ = np_random(0)
-        self.observation_space = gym.spaces.Box(low=np.zeros(1), high=np.zeros(1))
+        self.observation_space = gym.spaces.Box(low=np.zeros(dim), high=np.ones(dim))
         self.action_space = gym.spaces.Box(low=np.zeros(1), high=np.ones(1))
         self._max_episode_steps = 2
 
     def seed(self, seed=None):
         self.random, _ = np_random(seed)
-        self.acceptable = self.random.random()
 
     def generator(self):
-        s = np.zeros(1)
-        action = yield s, 0, False, {}
-        # if not self.action_space.contains(action):
-        # import ipdb
-
-        # ipdb.set_trace()
-        r = -abs(action.item() - self.acceptable)
-        yield s, r, True, {}
-        # t = False
-        # r = 1 / len(self.embeddings)
-        # for embedding, acceptable in zip(self.embeddings[:-1], self.acceptable):
-        #     action = yield embedding, r, t, {}
-        #     t = self.random.random() < sigmoid(abs(action - acceptable) * self.tol)
-        # yield self.embeddings[-1], r, True, {}
+        t = False
+        r = 1 / len(self.embeddings)
+        for embedding, acceptable in zip(self.embeddings[:-1], self.acceptable):
+            action = yield embedding, r, t, {}
+            t = self.random.normal(scale=self.std) < abs(action - acceptable)
+        yield self.embeddings[-1], r, True, {}
 
     def step(self, action):
         return self.iterator.send(action)
