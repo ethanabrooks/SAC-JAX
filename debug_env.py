@@ -35,7 +35,7 @@ class DebugEnv(gym.Env):
                 print(acceptable)
 
             self._render = render
-            t = self.random.random() < action.item()
+            t = self.random.random() < sigmoid(action.item())
             action = yield embedding, r, t, {}
         yield self.embeddings[-1], r, True, {}
 
