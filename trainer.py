@@ -57,7 +57,7 @@ class Trainer:
     ):
         self.use_tune = use_tune
         self.expl_noise = expl_noise
-        self.max_timesteps = int(max_timesteps)
+        self.max_timesteps = int(max_timesteps) if max_timesteps else None
         self.eval_freq = int(eval_freq)
         self.start_timesteps = int(start_timesteps)
         self.batch_size = int(batch_size)
