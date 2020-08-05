@@ -18,6 +18,7 @@ class DebugEnv(gym.Env):
         self.observation_space = gym.spaces.Box(low=np.zeros(dim), high=np.ones(dim))
         self.action_space = gym.spaces.Box(low=np.zeros(1), high=np.ones(1))
         self._max_episode_steps = 2
+        self._render = None
 
     def seed(self, seed=None):
         self.random, _ = np_random(seed)
@@ -31,7 +32,6 @@ class DebugEnv(gym.Env):
                 print(acceptable)
 
             self._render = render
-
             action = yield embedding, r, t, {}
             normal = self.random.normal(scale=self.std)
             t = abs(normal) < abs(action - acceptable)
@@ -49,7 +49,7 @@ class DebugEnv(gym.Env):
         self._render()
 
 
-if __name__ == "__main__":
+def play():
     env = DebugEnv(levels=100, dim=100, std=100)
     _ = env.reset()
     while True:
@@ -58,3 +58,7 @@ if __name__ == "__main__":
         _, r, t, i = env.step(action)
         print("reward:", r)
         print("done:", t)
+
+
+if __name__ == "__main__":
+    play()
