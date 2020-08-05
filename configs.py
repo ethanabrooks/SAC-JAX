@@ -100,6 +100,8 @@ l2b_debug_search.update(
     outer_max_timesteps=25000,
     outer_seed=hp.randint("outer_seed", 20),
     inner_seed=hp.randint("inner_seed", 20),
+    outer_lr=hp.choice("outer_lr", small_values(3, 5)),
+    outer_policy_freq=hp.choice("outer_policy_freq", [1, 2, 3]),
 )
 configs = dict(
     search=search,
