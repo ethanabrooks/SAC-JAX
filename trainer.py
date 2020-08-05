@@ -228,7 +228,7 @@ class Trainer:
 
         # Evaluate untrained policy.
         # We evaluate for 100 episodes as 10 episodes provide a very noisy estimation in some domains.
-        evaluations = []  # TODO
+        evaluations = [self.eval_policy(params)]  # TODO
         best_performance = None
         best_actor_params = None
         # if save_model: agent.save(f"./models/{policy}/{file_name}")
