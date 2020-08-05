@@ -270,7 +270,7 @@ class Trainer:
         )
 
     def make_env(self):
-        return DebugEnv(levels=100, dim=100, std=100)
+        return DebugEnv(levels=100, dim=100, std=1)
         # return gym.make(self.env_id)
 
     def eval_policy(self, params) -> float:
