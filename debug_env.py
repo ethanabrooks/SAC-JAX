@@ -9,7 +9,9 @@ def sigmoid(x):
 
 
 class DebugEnv(gym.Env):
-    def __init__(self, levels: int, dim: int, std: float):
+    def __init__(
+        self, levels: int, std: float, dim: int = None,
+    ):
         self.std = std
         self.random, _ = np_random(0)
         self.embeddings = np.eye(levels)
@@ -35,10 +37,9 @@ class DebugEnv(gym.Env):
 
             self._render = render
             action = yield embedding, r, t, {}
-            normal = self.random.normal(scale=self.std)
-            diff = abs(action - acceptable).item()
-            r = (1 - sigmoid(diff)) / len(self.embeddings)
-            t = abs(normal) < diff
+            # normal = self.random.normal(scale=self.std)
+            r = -abs(action - acceptable).item()
+            # t = abs(normal) < diff
         yield self.embeddings[-1], r, True, {}
 
     def step(self, action):
