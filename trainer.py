@@ -51,6 +51,7 @@ class Trainer:
         start_timesteps,
         use_tune,
         std,
+        levels,
         eval_episodes=100,
         **kwargs,
     ):
@@ -65,6 +66,7 @@ class Trainer:
         self.eval_episodes = int(eval_episodes)
         self.policy = policy
         self.std = std
+        self.levels = levels
         seed = int(seed)
         self.rng = jax.random.PRNGKey(seed)
 
@@ -272,7 +274,7 @@ class Trainer:
         )
 
     def make_env(self):
-        return DebugEnv(levels=1, std=self.std)
+        return DebugEnv(levels=self.levels, std=self.std)
         # return gym.make(self.env_id)
 
     def eval_policy(self, params) -> float:
@@ -302,4 +304,5 @@ if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
     add_arguments(PARSER)
     PARSER.add_argument("--std", type=float)
+    PARSER.add_argument("--levels", type=int)
     Trainer.main(**vars(PARSER.parse_args()))
