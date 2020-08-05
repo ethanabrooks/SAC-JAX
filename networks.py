@@ -31,19 +31,19 @@ class Actor(hk.Module):
                     ),
                 ),
                 jax.nn.relu,
-                # hk.Linear(
-                # 256,
-                # w_init=hk.initializers.VarianceScaling(
-                # scale=2.0, distribution="uniform"
-                # ),
-                # ),
-                # jax.nn.relu,
-                # hk.Linear(
-                # self.action_dim,
-                # w_init=hk.initializers.VarianceScaling(
-                # scale=2.0, distribution="uniform"
-                # ),
-                # ),
+                hk.Linear(
+                    256,
+                    w_init=hk.initializers.VarianceScaling(
+                        scale=2.0, distribution="uniform"
+                    ),
+                ),
+                jax.nn.relu,
+                hk.Linear(
+                    self.action_dim,
+                    w_init=hk.initializers.VarianceScaling(
+                        scale=2.0, distribution="uniform"
+                    ),
+                ),
             ]
         )
         return (
@@ -70,13 +70,13 @@ class Critic(hk.Module):
                         ),
                     ),
                     jax.nn.relu,
-                    # hk.Linear(
-                    # 256,
-                    # w_init=hk.initializers.VarianceScaling(
-                    # scale=2.0, distribution="uniform"
-                    # ),
-                    # ),
-                    # jax.nn.relu,
+                    hk.Linear(
+                        256,
+                        w_init=hk.initializers.VarianceScaling(
+                            scale=2.0, distribution="uniform"
+                        ),
+                    ),
+                    jax.nn.relu,
                     hk.Linear(
                         1,
                         w_init=hk.initializers.VarianceScaling(
