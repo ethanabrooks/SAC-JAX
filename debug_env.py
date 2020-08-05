@@ -36,7 +36,7 @@ class DebugEnv(gym.Env):
             self._render = render
             action = yield embedding, r, t, {}
             normal = self.random.normal(scale=self.std)
-            diff = abs(action - acceptable)
+            diff = abs(action - acceptable).item()
             r = (1 - sigmoid(diff)) / len(self.embeddings)
             t = abs(normal) < diff
         yield self.embeddings[-1], r, True, {}
