@@ -12,10 +12,12 @@ class DebugEnv(gym.Env):
     def __init__(self, levels: int, dim: int, std: float):
         self.std = std
         self.random, _ = np_random(0)
-        self.embeddings = self.random.random((levels, dim))
+        self.embeddings = np.eye(levels)
         self.acceptable = self.random.random(levels)
         self.iterator = None
-        self.observation_space = gym.spaces.Box(low=np.zeros(dim), high=np.ones(dim))
+        self.observation_space = gym.spaces.Box(
+            low=np.zeros(levels), high=np.ones(levels)
+        )
         self.action_space = gym.spaces.Box(low=np.zeros(1), high=np.ones(1))
         self._max_episode_steps = 2
         self._render = None
