@@ -19,7 +19,7 @@ class DebugEnv(gym.Env):
         self.observation_space = gym.spaces.Box(
             low=np.zeros(levels), high=np.ones(levels)
         )
-        self.action_space = gym.spaces.Box(low=np.zeros(1), high=np.ones(1))
+        self.action_space = gym.spaces.Box(low=-100 * np.ones(1), high=100 * np.ones(1))
         self._max_episode_steps = 2
         self._render = None
 
