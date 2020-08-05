@@ -26,8 +26,15 @@ class DebugEnv(gym.Env):
         t = False
         r = 1 / len(self.embeddings)
         for embedding, acceptable in zip(self.embeddings[:-1], self.acceptable):
+
+            def render():
+                print(acceptable)
+
+            self._render = render
+
             action = yield embedding, r, t, {}
-            t = self.random.normal(scale=self.std) < abs(action - acceptable)
+            normal = self.random.normal(scale=self.std)
+            t = abs(normal) < abs(action - acceptable)
         yield self.embeddings[-1], r, True, {}
 
     def step(self, action):
@@ -39,4 +46,15 @@ class DebugEnv(gym.Env):
         return s
 
     def render(self, mode="human"):
-        pass
+        self._render()
+
+
+if __name__ == "__main__":
+    env = DebugEnv(levels=100, dim=100, std=100)
+    _ = env.reset()
+    while True:
+        env.render()
+        action = float(input("go"))
+        _, r, t, i = env.step(action)
+        print("reward:", r)
+        print("done:", t)
