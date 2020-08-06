@@ -47,14 +47,20 @@ class DebugEnv(gym.Env):
 
 
 def play():
-    env = DebugEnv(levels=100, std=100)
+    env = DebugEnv(levels=5, std=100)
     _ = env.reset()
+    cumulative = 0
     while True:
         # env.render()
         action = float(input("go"))
         _, r, t, i = env.step(action)
+        cumulative += r
         print("reward:", r)
         print("done:", t)
+        if t:
+            print("cumulative", cumulative)
+            cumulative = 0
+            env.reset()
 
 
 if __name__ == "__main__":
