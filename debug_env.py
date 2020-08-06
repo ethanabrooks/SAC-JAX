@@ -14,6 +14,7 @@ class DebugEnv(gym.Env):
         self.random, _ = np_random(0)
         self.levels = levels
         states = len(list(self.reward_iterator())) + 1
+        self.max_reward = sum(self.reward_iterator())
         self.embeddings = np.eye(states)
         self.iterator = None
         self.observation_space = gym.spaces.Box(
@@ -26,6 +27,7 @@ class DebugEnv(gym.Env):
             yield i
             for _ in range(i):
                 yield -1
+        yield self.levels
 
     def seed(self, seed=None):
         self.random, _ = np_random(seed)
@@ -33,7 +35,7 @@ class DebugEnv(gym.Env):
     def generator(self):
         t = False
         for r, embedding in zip(self.reward_iterator(), self.embeddings):
-            action = yield embedding, r, t, {}
+            action = yield embedding, r / self.max_reward, t, {}
             t = self.random.random() < float(action)
         yield self.embeddings[-1], len(self.embeddings), True, {}
 
