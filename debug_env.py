@@ -9,9 +9,7 @@ def sigmoid(x):
 
 
 class DebugEnv(gym.Env):
-    def __init__(
-        self, levels: int, std: float, dim: int = None,
-    ):
+    def __init__(self, levels: int, std: float):
         self.std = std
         self.random, _ = np_random(0)
         levels += 1
@@ -29,20 +27,11 @@ class DebugEnv(gym.Env):
         self.random, _ = np_random(seed)
 
     def generator(self):
-        t = False
-        r = 0
+        r = 1 / len(self.embeddings)
         action = yield self.embeddings[0], r, False, {}
-        for embedding, acceptable in zip(self.embeddings[1:-1], self.acceptable):
-
-            def render():
-                print(acceptable)
-
-            self._render = render
+        for embedding in self.embeddings[1:-1]:
+            t = self.random.random() < float(action)
             action = yield embedding, r, t, {}
-            # normal = self.random.normal(scale=self.std)
-            r = -abs(action - acceptable).item()
-            # t = abs(normal) < diff
-        r = -abs(action - self.acceptable[-1]).item()
         yield self.embeddings[-1], r, True, {}
 
     def step(self, action):
@@ -58,10 +47,10 @@ class DebugEnv(gym.Env):
 
 
 def play():
-    env = DebugEnv(levels=100, dim=100, std=100)
+    env = DebugEnv(levels=100, std=100)
     _ = env.reset()
     while True:
-        env.render()
+        # env.render()
         action = float(input("go"))
         _, r, t, i = env.step(action)
         print("reward:", r)
