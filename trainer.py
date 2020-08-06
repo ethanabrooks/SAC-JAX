@@ -4,6 +4,7 @@
 import argparse
 import itertools
 from dataclasses import dataclass
+from pathlib import Path
 from pprint import pprint
 from typing import Any, Generator, Tuple
 
@@ -12,6 +13,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import ray
+from flax import serialization
 from ray import tune
 from ray.tune.suggest.hyperopt import HyperOptSearch
 
@@ -113,7 +115,7 @@ class Trainer:
                 config[k] = v
         if use_tune:
             local_mode = num_samples is None
-            ray.init(webui_host="127.0.0.1", local_mode=local_mode)
+            ray.init(dashboard_host="127.0.0.1", local_mode=local_mode)
             metric = "final_reward"
 
             def run(c):
@@ -201,6 +203,12 @@ class Trainer:
             if done:
                 # Reset environment
                 obs, done = env.reset(), False
+
+    @staticmethod
+    def save(t, params):
+        with tune.checkpoint_dir(step=t) as checkpoint_dir:
+            with Path(checkpoint_dir, "params").open("wb") as fp:
+                fp.write(serialization.to_bytes(params))
 
     def act(self, params, obs, rng):
         return self.agent.policy(params, obs, rng)

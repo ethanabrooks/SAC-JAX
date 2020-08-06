@@ -1,11 +1,14 @@
 import itertools
+from pathlib import Path
 from typing import Generator
 
 import gym
 import jax
 import jax.numpy as jnp
 import numpy as np
+from flax import serialization
 from gym.wrappers import TimeLimit
+from ray import tune
 
 from debug_env import DebugEnv
 from replay_buffer import ReplayBuffer, Sample, Step
@@ -99,6 +102,7 @@ class L2bEnv(Trainer, gym.Env):
         params = next(loop.train)
         con = np.stack(list(self.get_context(params)))
         step = loop.env.send(self.env.action_space.sample())
+        best_reward = None
         for t in range(self.max_timesteps) if self.max_timesteps else itertools.count():
             self.replay_buffer.add(step)
             obs = step.obs, con
@@ -112,8 +116,9 @@ class L2bEnv(Trainer, gym.Env):
                 con = np.stack(list(self.get_context(params)))
 
                 if (t + 1) % self.update_freq == 0:
-                    self.report(eval_reward=self.eval_policy(params))
+                    eval_reward = self.eval_policy(params)
                     self.report(
+                        eval_reward=eval_reward,
                         actor_linear_b=params["actor/linear"].b.mean().item(),
                         actor_linear_w=params["actor/linear"].w.mean().item(),
                         actor_linear_1_b=params["actor/linear_1"].b.mean().item(),
@@ -121,6 +126,9 @@ class L2bEnv(Trainer, gym.Env):
                         actor_linear_2_b=params["actor/linear_2"].b.mean().item(),
                         actor_linear_2_w=params["actor/linear_2"].w.mean().item(),
                     )
+                    if best_reward and eval_reward > best_reward:
+                        best_reward = eval_reward
+                        self.save(t, params)
 
         obs = step.obs, con
         yield obs, self.eval_policy(params), True, {}
