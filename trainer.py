@@ -290,7 +290,6 @@ class Trainer:
 
             while not done:
                 action = self.agent.policy(params, obs)
-                self.report(action=action.item())
                 obs, reward, done, _ = eval_env.step(action)
 
                 remaining_steps -= 1
