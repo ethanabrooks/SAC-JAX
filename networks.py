@@ -28,20 +28,20 @@ class Actor(hk.Module):
         actor_net = hk.Sequential(
             [
                 hk.Flatten(),
-                # hk.Linear(
-                # 256,
-                # w_init=hk.initializers.VarianceScaling(
-                # scale=2.0, distribution="uniform"
-                # ),
-                # ),
-                # jax.nn.relu,
-                # hk.Linear(
-                # 256,
-                # w_init=hk.initializers.VarianceScaling(
-                # scale=2.0, distribution="uniform"
-                # ),
-                # ),
-                # jax.nn.relu,
+                hk.Linear(
+                    256,
+                    w_init=hk.initializers.VarianceScaling(
+                        scale=2.0, distribution="uniform"
+                    ),
+                ),
+                jax.nn.relu,
+                hk.Linear(
+                    256,
+                    w_init=hk.initializers.VarianceScaling(
+                        scale=2.0, distribution="uniform"
+                    ),
+                ),
+                jax.nn.relu,
                 hk.Linear(
                     self.action_dim,
                     w_init=hk.initializers.VarianceScaling(
@@ -70,20 +70,20 @@ class Critic(hk.Module):
             return hk.Sequential(
                 [
                     hk.Flatten(),
-                    # hk.Linear(
-                    # 256,
-                    # w_init=hk.initializers.VarianceScaling(
-                    # scale=2.0, distribution="uniform"
-                    # ),
-                    # ),
-                    # jax.nn.relu,
-                    # hk.Linear(
-                    # 256,
-                    # w_init=hk.initializers.VarianceScaling(
-                    # scale=2.0, distribution="uniform"
-                    # ),
-                    # ),
-                    # jax.nn.relu,
+                    hk.Linear(
+                        256,
+                        w_init=hk.initializers.VarianceScaling(
+                            scale=2.0, distribution="uniform"
+                        ),
+                    ),
+                    jax.nn.relu,
+                    hk.Linear(
+                        256,
+                        w_init=hk.initializers.VarianceScaling(
+                            scale=2.0, distribution="uniform"
+                        ),
+                    ),
+                    jax.nn.relu,
                     hk.Linear(
                         1,
                         w_init=hk.initializers.VarianceScaling(
