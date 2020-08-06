@@ -104,7 +104,7 @@ l2b_debug_search.update(
     outer_policy_freq=hp.choice("outer_policy_freq", [1, 2, 3]),
 )
 no_neg = get_config("no-neg-reward")
-no_neg.update(seed=hp.randint("seed", 20), max_timesteps=None)
+no_neg.update(seed=hp.randint("seed", 20))
 configs = dict(
     search=search,
     pendulum=pendulum,
