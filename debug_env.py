@@ -35,9 +35,12 @@ class DebugEnv(gym.Env):
     def generator(self):
         *rewards, last_reward = [r / self.max_reward for r in self.reward_iterator()]
         t = False
+        b = True
         for r, embedding in zip(rewards, self.embeddings):
             action = yield embedding, r, t, {}
-            t = self.random.random() < float(action)
+            random = self.random.random()
+            t = random < float(action) if b else random > float(action)
+            b = not b
         yield self.embeddings[-1], last_reward, True, {}
 
     def step(self, action):
