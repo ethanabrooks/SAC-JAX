@@ -27,7 +27,7 @@ class DebugEnv(gym.Env):
         self.random, _ = np_random(seed)
 
     def generator(self):
-        r = 1 / len(self.embeddings)
+        r = 1 / (len(self.embeddings) - 1)
         action = yield self.embeddings[0], r, False, {}
         for embedding in self.embeddings[1:-1]:
             t = self.random.random() < float(action)
