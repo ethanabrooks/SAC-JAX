@@ -84,7 +84,7 @@ l2b_search = dict(
 )
 l2b_search.update(
     inner_max_timesteps=hp.choice("inner_max_timesteps", [200, 500, 1000, 1500]),
-    outer_max_timesteps=4000,
+    outer_max_timesteps=50000,
 )
 debug_l2b = dict(
     context_length=2,
