@@ -5,6 +5,7 @@ import gym
 import jax
 import jax.numpy as jnp
 import numpy as np
+from gym.wrappers import TimeLimit
 
 from debug_env import DebugEnv
 from replay_buffer import ReplayBuffer, Sample, Step
@@ -72,7 +73,8 @@ class L2bEnv(Trainer, gym.Env):
         return gym.spaces.Box(low=low, high=high)
 
     def make_env(self):
-        return DebugEnv(levels=self.levels, std=self.std)
+        env = DebugEnv(levels=self.levels, std=self.std)
+        return TimeLimit(env, max_episode_steps=len(list(env.reward_iterator())))
 
     def step(self, action):
         return self.iterator.send(action)
