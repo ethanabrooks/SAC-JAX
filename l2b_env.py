@@ -37,7 +37,7 @@ class L2bEnv(Trainer, gym.Env):
         self.std = std
         self.dim = dim
         self.levels = levels
-        super().__init__(*args, env_id=None, **kwargs)
+        super().__init__(*args, **kwargs)
         self.alpha = alpha
         self.update_freq = update_freq
         self.context_length = context_length

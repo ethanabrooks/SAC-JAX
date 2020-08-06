@@ -50,8 +50,6 @@ class Trainer:
         seed,
         start_timesteps,
         use_tune,
-        std,
-        levels,
         eval_episodes=100,
         **kwargs,
     ):
@@ -65,8 +63,6 @@ class Trainer:
         self.env_id = env_id
         self.eval_episodes = int(eval_episodes)
         self.policy = policy
-        self.std = std
-        self.levels = levels
         seed = int(seed)
         self.rng = jax.random.PRNGKey(seed)
 
