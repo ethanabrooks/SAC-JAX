@@ -5,6 +5,7 @@ import jax
 import numpy as np
 from jax import numpy as jnp
 from jax.nn import sigmoid
+from jax.random import PRNGKey
 
 """
     Actor and Critic networks defined as in the TD3 paper (Fujimoto et. al.) https://arxiv.org/abs/1802.09477
@@ -14,13 +15,16 @@ T = Union[np.ndarray, jnp.DeviceArray]
 
 
 class Actor(hk.Module):
-    def __init__(self, action_dim: int, min_action: T, max_action: T):
+    def __init__(
+        self, action_dim: int, min_action: T, max_action: T, noise_clip: float
+    ):
         super(Actor, self).__init__()
+        self.noise_clip = noise_clip
         self.action_dim = action_dim
         self.min_action = min_action
         self.max_action = max_action
 
-    def __call__(self, obs: T) -> jnp.DeviceArray:
+    def __call__(self, obs: T, rng: PRNGKey = None) -> jnp.DeviceArray:
         actor_net = hk.Sequential(
             [
                 hk.Flatten(),
@@ -46,10 +50,13 @@ class Actor(hk.Module):
                 ),
             ]
         )
-        return (
-            sigmoid(actor_net(obs)) * (self.max_action - self.min_action)
-            + self.min_action
-        )
+        out = actor_net(obs)
+        if rng is not None:
+            out += jax.random.normal(rng, out.shape).clip(
+                -self.noise_clip, self.noise_clip
+            )
+
+        return sigmoid(out) * (self.max_action - self.min_action) + self.min_action
 
 
 class Critic(hk.Module):

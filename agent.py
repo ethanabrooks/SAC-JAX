@@ -10,6 +10,8 @@ from gym.spaces import Box
 from jax.experimental import optix
 import rlax
 import numpy as np
+from jax.random import PRNGKey
+
 from networks import Actor, Critic
 import functools
 
@@ -62,8 +64,13 @@ class Agent(object):
         self.actor = hk.without_apply_rng(hk.transform(self.actor))
         self.critic = hk.without_apply_rng(hk.transform(self.critic))
 
-    def actor(self, x):
-        return Actor(self.action_dim, self.min_action, self.max_action)(x)
+    def actor(self, x, rng=None):
+        return Actor(
+            action_dim=self.action_dim,
+            min_action=self.min_action,
+            max_action=self.max_action,
+            noise_clip=self.noise_clip,
+        )(x, rng)
 
     @staticmethod
     def critic(x, a):
@@ -154,14 +161,8 @@ class Agent(object):
             regularization scheme.
             As this helps stabilize the critic, we also use this for the DDPG update rule.
         """
-        noise = (jax.random.normal(rng, shape=action.shape) * self.policy_noise).clip(
-            -self.noise_clip, self.noise_clip
-        )
-
         # Make sure the noisy action is within the valid bounds.
-        next_action = (self.actor.apply(target_actor_params, next_obs) + noise).clip(
-            self.min_action, self.max_action
-        )
+        next_action = self.actor.apply(target_actor_params, next_obs, rng)
 
         next_q_1, next_q_2 = self.critic.apply(
             target_critic_params, next_obs, next_action
@@ -201,5 +202,7 @@ class Agent(object):
         return new_params, opt_state
 
     @functools.partial(jax.jit, static_argnums=0)
-    def policy(self, actor_params: hk.Params, obs: np.ndarray) -> jnp.DeviceArray:
-        return self.actor.apply(actor_params, obs)
+    def policy(
+        self, actor_params: hk.Params, obs: np.ndarray, rng: PRNGKey = None
+    ) -> jnp.DeviceArray:
+        return self.actor.apply(actor_params, obs, rng)

@@ -207,12 +207,7 @@ class Trainer:
                 obs, done = env.reset(), False
 
     def act(self, params, obs, rng):
-        return (
-            self.agent.policy(params, obs)
-            + jax.random.normal(rng, (self.action_dim,))
-            * ((self.max_action - self.min_action) / 2)
-            * self.expl_noise
-        ).clip(self.min_action, self.max_action)
+        return self.agent.policy(params, obs, rng)
 
     def train(self):
         rng = self.rng
