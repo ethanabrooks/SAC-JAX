@@ -19,7 +19,7 @@ class DebugEnv(gym.Env):
         self.observation_space = gym.spaces.Box(
             low=np.zeros(levels), high=np.ones(levels)
         )
-        self.action_space = gym.spaces.Box(low=-100 * np.ones(1), high=100 * np.ones(1))
+        self.action_space = gym.spaces.Box(low=np.zeros(1), high=np.ones(1))
         self._max_episode_steps = 2
         self._render = None
 
@@ -30,7 +30,7 @@ class DebugEnv(gym.Env):
         r = 1 / len(self.embeddings)
         action = yield self.embeddings[0], r, False, {}
         for embedding in self.embeddings[1:-1]:
-            t = self.random.random() < sigmoid(float(action))
+            t = self.random.random() < float(action)
             action = yield embedding, r, t, {}
         yield self.embeddings[-1], r, True, {}
 
