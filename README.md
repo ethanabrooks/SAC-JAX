@@ -1,5 +1,5 @@
-# TD3-JAX
-A JAX Implementation of the [Twin Delayed DDPG](https://github.com/sfujim/TD3) Algorithm
+# SAC-JAX
+A JAX Implementation of the [Soft Actor Critic](https://arxiv.org/pdf/1801.01290.pdf) Algorithm
 
 
 ## Requirements
@@ -10,12 +10,10 @@ Beside each requirement, I have stated the version installed on my system for re
 * [Haiku](https://github.com/deepmind/dm-haiku) - dm-haiku 0.0.1a0, dm-sonnet 2.0.0b0
 * [RLax](https://github.com/deepmind/rlax) - rlax 0.0.0
 * [Gym](https://github.com/openai/gym) - gym 0.15.4
-* [MuJoCo](https://github.com/openai/mujoco-py) - mujoco-py 2.0.2.9
 
-## Command line arguments
-In order to run each environment
+## Example run command
 ```
-for seed in {0..9}; do python main.py --env Hopper-v2 --seed $seed; done
+python trainer.py
 ```
 
 The default hyper parameters aren't ideal for all domains.
