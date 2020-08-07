@@ -25,19 +25,6 @@ from replay_buffer import ReplayBuffer, Step
 OptState = Any
 
 
-@dataclass
-class Loops:
-    env: Generator
-    train: Generator
-
-
-@dataclass
-class ReportData:
-    reward: float
-    done: bool
-    t: int
-
-
 class Trainer:
     def __init__(
         self,
@@ -72,7 +59,7 @@ class Trainer:
         # if save_model and not os.path.exists("./models/" + policy):
         #     os.makedirs("./models/" + policy)
 
-        self.env = self.make_env()
+        self.env = gym.make(self.env_id)
         self.env.seed(seed)
         self.env.action_space.np_random.seed(seed)
         self.env.observation_space.np_random.seed(seed)
@@ -91,11 +78,6 @@ class Trainer:
         )
 
     @classmethod
-    def run(cls, config):
-        pprint(config)
-        cls(**config).train()
-
-    @classmethod
     def main(
         cls,
         config,
@@ -112,13 +94,14 @@ class Trainer:
         for k, v in kwargs.items():
             if k not in config:
                 config[k] = v
+
+        def run(c):
+            return cls(**c).train()
+
         if use_tune:
             local_mode = num_samples is None
             ray.init(dashboard_host="127.0.0.1", local_mode=local_mode)
             metric = "final_reward"
-
-            def run(c):
-                return cls.run(c)
 
             resources_per_trial = {"gpu": gpus_per_trial, "cpu": cpus_per_trial}
             kwargs = dict()
@@ -138,7 +121,7 @@ class Trainer:
                 **kwargs,
             )
         else:
-            cls.run(config)
+            run(config)
 
     def report(self, **kwargs):
         if self.use_tune:
@@ -146,49 +129,31 @@ class Trainer:
         else:
             pprint(kwargs)
 
-    def report_loop(self) -> Generator[None, ReportData, None]:
+    def env_loop(self, env=None) -> Generator[Step, jnp.ndarray, None]:
+        env = env or self.env
+        obs, done = env.reset(), False
+
         episode_reward = 0
         episode_timesteps = 0
         episode_num = 0
 
-        while True:
-            data = yield
-            episode_reward += data.reward
-
-            if data.done:
-                # +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
-                self.report(
-                    timestep=data.t + 1,
-                    episode=episode_num + 1,
-                    episode_timestep=episode_timesteps,
-                    reward=episode_reward,
-                )
-                # Reset environment
-                episode_reward = 0
-                episode_timesteps = 0
-                episode_num += 1
-
-    def env_loop(
-        self, env=None, report_loop=None
-    ) -> Generator[Step, jnp.ndarray, None]:
-        if report_loop:
-            next(report_loop)
-        env = env or self.env
-        obs, done = env.reset(), False
-        episode_timesteps = 0
         action = yield obs
 
         for t in itertools.count():
-
             episode_timesteps += 1
+
             # Perform action
             next_obs, reward, done, _ = env.step(action)
-            if report_loop:
-                report_loop.send(ReportData(reward=reward, done=done, t=t))
+            episode_reward += reward
+
             # This 'trick' converts the finite-horizon task into an infinite-horizon one. It does change the problem
             # we are solving, however it has been observed empirically to work pretty well. noinspection
-            # noinspection PyProtectedMember
-            done_bool = float(done) if episode_timesteps < env._max_episode_steps else 0
+            try:
+                # noinspection PyProtectedMember
+                max_episode_steps = env._max_episode_steps
+            except AttributeError:
+                max_episode_steps = np.inf
+            done_bool = float(done) if episode_timesteps < max_episode_steps else 0
 
             action = yield Step(
                 obs=obs,
@@ -200,8 +165,19 @@ class Trainer:
             obs = next_obs
 
             if done:
-                # Reset environment
                 obs, done = env.reset(), False
+
+                # +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
+                self.report(
+                    timestep=t + 1,
+                    episode=episode_num + 1,
+                    episode_timestep=episode_timesteps,
+                    reward=episode_reward,
+                )
+
+                episode_reward = 0
+                episode_timesteps = 0
+                episode_num += 1
 
     @staticmethod
     def save(t, params):
@@ -211,17 +187,20 @@ class Trainer:
 
     def train(self):
         rng = self.rng
-        replay_buffer = self.build_replay_buffer()
-        loop = Loops(
-            env=self.env_loop(report_loop=self.report_loop()),
-            train=self.agent.train_loop(
-                rng,
-                sample_obs=self.env.observation_space.sample(),
-                sample_action=self.env.action_space.sample(),
-            ),
+        replay_buffer = ReplayBuffer(
+            self.env.observation_space.shape,
+            self.env.action_space.shape,
+            max_size=self.replay_size,
         )
-        next(loop.env)
-        params = next(loop.train)
+        env_loop = self.env_loop()
+        train_loop = self.agent.train_loop(
+            rng,
+            sample_obs=self.env.observation_space.sample(),
+            sample_action=self.env.action_space.sample(),
+        )
+
+        next(env_loop)
+        params = next(train_loop)
 
         # Evaluate untrained policy.
         # We evaluate for 100 episodes as 10 episodes provide a very noisy estimation in some domains.
@@ -229,8 +208,9 @@ class Trainer:
         self.report(eval_reward=eval_reward)
         evaluations = [eval_reward]
         best_performance = eval_reward
+        best_params = params
 
-        step = loop.env.send(self.env.action_space.sample())
+        step = env_loop.send(self.env.action_space.sample())
         for t in range(self.max_timesteps) if self.max_timesteps else itertools.count():
             replay_buffer.add(step)
             if t <= self.start_timesteps:
@@ -243,8 +223,8 @@ class Trainer:
                 # Train agent after collecting sufficient data
                 rng, update_rng = jax.random.split(rng)
                 sample = replay_buffer.sample(self.batch_size, rng=rng)
-                params = loop.train.send(sample)
-            step = loop.env.send(action)
+                params = train_loop.send(sample)
+            step = env_loop.send(action)
 
             # Evaluate episode
             if (t + 1) % self.eval_freq == 0:
@@ -253,36 +233,22 @@ class Trainer:
                 evaluations.append(eval_reward)
                 if best_performance is None or evaluations[-1] > best_performance:
                     best_performance = evaluations[-1]
-                    best_actor_params = params
-                # if save_model: agent.save(f"./models/{policy}/{file_name}")
+                    best_params = params
 
         # At the end, re-evaluate the policy which is presumed to be best. This ensures an un-biased estimator when
         # reporting the average best results across each run.
-        # params = best_actor_params
-        # evaluations.append(self.eval_policy(params))
-        # print(f"Selected policy has an average score of: {evaluations[-1]:.3f}")
+        params = best_params
+        evaluations.append(self.eval_policy(params))
         self.report(final_reward=self.eval_policy(params))
-        return
-
-    def build_replay_buffer(self):
-        return ReplayBuffer(
-            self.env.observation_space.shape,
-            self.env.action_space.shape,
-            max_size=self.replay_size,
-        )
-
-    def make_env(self):
-        # return DebugEnv(levels=self.levels, std=self.std)
-        return gym.make(self.env_id)
 
     def eval_policy(self, params) -> float:
-        eval_env = self.make_env()
+        eval_env = gym.make(self.env_id)
 
         avg_reward = 0.0
         for _ in range(self.eval_episodes):
             obs, done = eval_env.reset(), False
-            # noinspection PyProtectedMember
 
+            # noinspection PyProtectedMember
             remaining_steps = eval_env._max_episode_steps
 
             while not done:

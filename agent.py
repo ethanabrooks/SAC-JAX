@@ -61,6 +61,7 @@ class Agent(object):
         self, rng: jnp.ndarray, sample_obs: np.ndarray, sample_action: np.ndarray,
     ):
         rng, actor_rng, critic_rng, alpha_rng = jax.random.split(rng, 4)
+
         actor_params = target_actor_params = self.actor.init(actor_rng, sample_obs)
         actor_opt_state = self.actor_opt_init(actor_params)
 
@@ -74,15 +75,16 @@ class Agent(object):
 
         for update in itertools.count():
             sample = yield actor_params
-            rng, actor_rng, critic_rng = jax.random.split(rng, 3)
+            rng, actor_rng, td_rng = jax.random.split(rng, 3)
 
             target_Q = jax.lax.stop_gradient(
                 self.get_td_target(
                     next_obs=sample.next_obs,
                     reward=sample.reward,
                     not_done=1 - sample.done,
-                    actor=actor_params,
+                    actor_params=actor_params,
                     critic_target=target_critic_params,
+                    rng=td_rng,
                 )
             )
 
@@ -102,6 +104,7 @@ class Agent(object):
                     obs=sample.obs,
                     rng=actor_rng,
                 )
+
                 alpha_params, alpha_opt_state = self.update_alpha(
                     alpha_params=alpha_params, opt_state=alpha_opt_state, log_pi=log_p
                 )
@@ -113,16 +116,17 @@ class Agent(object):
     def update_actor(self, actor_params, critic_params, opt_state, obs, rng):
         def loss(params):
             mu, log_sig = self.actor.apply(params, obs)
-            pi = mu + jax.random.normal(rng, mu.shape) * jnp.exp(log_sig)
-            log_p = gaussian_likelihood(pi, mu, log_sig)
-            pi = jnp.tanh(pi)
-            log_p -= jnp.sum(jnp.log(nn.relu(1 - pi ** 2) + 1e-6), axis=1)
-            actor_action = self.postprocess_action(pi)
+            pi = self.sample_pi(mu, log_sig, rng)
+            action = self.postprocess_action(pi)
+            likelihood = gaussian_likelihood(pi, mu, log_sig)
+            likelihood -= jnp.sum(
+                jnp.log(nn.relu(1 - jnp.tanh(pi) ** 2) + 1e-6), axis=1
+            )
 
-            q1, q2 = self.critic.apply(critic_params, obs, actor_action)
+            q1, q2 = self.critic.apply(critic_params, obs, action)
             min_q = jnp.minimum(q1, q2)
-            actor_loss = single_mse(log_p, min_q)
-            return jnp.mean(actor_loss), log_p
+            actor_loss = single_mse(likelihood, min_q)
+            return jnp.mean(actor_loss), likelihood
 
         gradient, log_pi = jax.grad(loss, has_aux=True)(actor_params)
         updates, opt_state = self.actor_opt_update(gradient, opt_state)
@@ -133,7 +137,6 @@ class Agent(object):
     def update_critic(self, critic_params, opt_state, obs, action, target_q):
         def loss(params):
             current_Q1, current_Q2 = self.critic.apply(params, obs, action)
-
             critic_loss = double_mse(current_Q1, current_Q2, target_q)
             return jnp.mean(critic_loss)
 
@@ -161,17 +164,18 @@ class Agent(object):
         return new_params, opt_state
 
     @functools.partial(jax.jit, static_argnums=0)
-    def get_td_target(
-        self, next_obs, reward, not_done, actor, critic_target,
-    ):
-        mu, _ = self.actor.apply(actor, next_obs)
-        next_action = 2 * jnp.tanh(mu)
+    def get_td_target(self, next_obs, reward, not_done, critic_target, **kwargs):
+        next_action = self.policy(obs=next_obs, **kwargs)
 
         target_Q1, target_Q2 = self.critic.apply(critic_target, next_obs, next_action)
         target_Q = jnp.minimum(target_Q1, target_Q2)
         target_Q = reward + not_done * self.discount * target_Q
 
         return target_Q
+
+    @staticmethod
+    def sample_pi(mu, log_sig, rng):
+        return mu + jax.random.normal(rng, mu.shape) * jnp.exp(log_sig)
 
     def postprocess_action(self, pi):
         return jnp.tanh(pi) * (self.max_action - self.min_action) + self.min_action
@@ -181,7 +185,5 @@ class Agent(object):
         self, actor_params: hk.Params, obs: np.ndarray, rng: PRNGKey = None
     ) -> jnp.DeviceArray:
         mu, log_sig = self.actor.apply(actor_params, obs)
-        pi = mu
-        if rng is not None:
-            pi += jax.random.normal(rng, mu.shape) * jnp.exp(log_sig)
+        pi = mu if rng is None else self.sample_pi(mu, log_sig, rng)
         return self.postprocess_action(pi)
