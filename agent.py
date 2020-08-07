@@ -93,20 +93,26 @@ class Agent(object):
             sample = yield actor_params
             rng, actor_rng, critic_rng = jax.random.split(rng, 3)
 
+            target_Q = jax.lax.stop_gradient(
+                self.get_td_target(
+                    next_obs=sample.next_obs,
+                    reward=sample.reward,
+                    not_done=1 - sample.done,
+                    actor=actor_params,
+                    critic_target=target_critic_params,
+                )
+            )
+
             critic_params, critic_opt_state = self.update_critic(
-                critic_params,
-                target_critic_params=target_critic_params,
-                target_actor_params=target_actor_params,
-                critic_opt_state=critic_opt_state,
-                rng=critic_rng,
-                **vars(sample),
+                params=critic_params,
+                opt_state=critic_opt_state,
+                state=sample.obs,
+                action=sample.action,
+                target_Q=target_Q,
             )
 
             if update % self.policy_freq == 0:
-                # actor_params, actor_opt_state = self.update_actor(
-                #     actor_params, critic_params, actor_opt_state, sample.obs
-                # )
-                actor_params, actor_opt_state = self.actor_step(
+                actor_params, actor_opt_state = self.update_actor(
                     rng=actor_rng,
                     params=actor_params,
                     critic=critic_params,
@@ -133,78 +139,37 @@ class Agent(object):
         return -jnp.mean(self.critic_1(critic_params, obs, action))
 
     @functools.partial(jax.jit, static_argnums=0)
-    def update_actor(
-        self,
-        actor_params: hk.Params,
-        critic_params: hk.Params,
-        actor_opt_state: OptState,
-        obs: np.ndarray,
-    ) -> Tuple[hk.Params, OptState]:
-        """Learning rule (stochastic gradient descent)."""
-        _, gradient = jax.value_and_grad(self.actor_loss)(
-            actor_params, critic_params, obs
-        )
-        updates, opt_state = self.actor_opt_update(gradient, actor_opt_state)
-        new_params = optix.apply_updates(actor_params, updates)
+    def update_actor(self, rng, params, critic, state, opt_state):
+        def loss(actor_params):
+            mu, log_sig = self.actor.apply(actor_params, state)
+            pi = mu + jax.random.normal(rng, mu.shape) * jnp.exp(log_sig)
+            log_p = gaussian_likelihood(pi, mu, log_sig)
+            pi = jnp.tanh(pi)
+            log_p -= jnp.sum(jnp.log(nn.relu(1 - pi ** 2) + 1e-6), axis=1)
+            actor_action = self.postprocess_action(pi)
+
+            q1, q2 = self.critic.apply(critic, state, actor_action)
+            min_q = jnp.minimum(q1, q2)
+            partial_loss_fn = jax.vmap(functools.partial(actor_loss_fn))
+            actor_loss = partial_loss_fn(log_p, min_q)
+            return jnp.mean(actor_loss), log_p
+
+        gradient, log_p = jax.grad(loss, has_aux=True)(params)
+        updates, opt_state = self.actor_opt_update(gradient, opt_state)
+        new_params = optix.apply_updates(params, updates)
         return new_params, opt_state
 
     @functools.partial(jax.jit, static_argnums=0)
-    def critic_loss(
-        self,
-        critic_params: hk.Params,
-        target_critic_params: hk.Params,
-        target_actor_params: hk.Params,
-        obs: np.ndarray,
-        action: np.ndarray,
-        next_obs: np.ndarray,
-        reward: np.ndarray,
-        done: np.ndarray,
-        rng: jnp.ndarray,
-    ) -> jnp.DeviceArray:
-        """
-            TD3 adds truncated Gaussian noise to the policy while training the critic.
-            Can be seen as a form of 'Exploration Consciousness' https://arxiv.org/abs/1812.05551 or simply as a
-            regularization scheme.
-            As this helps stabilize the critic, we also use this for the DDPG update rule.
-        """
-        # Make sure the noisy action is within the valid bounds.
-        next_action = self.policy(target_actor_params, next_obs, rng)
+    def update_critic(self, params, opt_state, state, action, target_Q):
+        def loss(critic):
+            current_Q1, current_Q2 = self.critic.apply(critic, state, action)
 
-        next_q_1, next_q_2 = self.critic.apply(
-            target_critic_params, next_obs, next_action
-        )
-        if self.td3_update:
-            next_q = jax.lax.min(next_q_1, next_q_2)
-        else:
-            # Since the actor uses Q_1 for training, setting this as the target for the critic updates is sufficient to
-            # obtain an equivalent update.
-            next_q = next_q_1
-        # Cut the gradient from flowing through the target critic. This is more efficient, computationally.
-        target_q = jax.lax.stop_gradient(reward + self.discount * next_q * (1 - done))
-        q_1, q_2 = self.critic.apply(critic_params, obs, action)
+            critic_loss = double_mse(current_Q1, current_Q2, target_Q)
+            return jnp.mean(critic_loss)
 
-        return jnp.mean(rlax.l2_loss(q_1, target_q) + rlax.l2_loss(q_2, target_q))
-
-    @functools.partial(jax.jit, static_argnums=0)
-    def update_critic(
-        self,
-        critic_params: hk.Params,
-        target_critic_params: hk.Params,
-        target_actor_params: hk.Params,
-        critic_opt_state: OptState,
-        rng: jnp.ndarray,
-        **kwargs,
-    ) -> Tuple[hk.Params, OptState]:
-        """Learning rule (stochastic gradient descent)."""
-        _, gradient = jax.value_and_grad(self.critic_loss)(
-            critic_params,
-            target_critic_params=target_critic_params,
-            target_actor_params=target_actor_params,
-            rng=rng,
-            **kwargs,
-        )
-        updates, opt_state = self.critic_opt_update(gradient, critic_opt_state)
-        new_params = optix.apply_updates(critic_params, updates)
+        gradient = jax.grad(loss)(params)
+        updates, opt_state = self.critic_opt_update(gradient, opt_state)
+        new_params = optix.apply_updates(params, updates)
         return new_params, opt_state
 
     def postprocess_action(self, pi):
@@ -221,25 +186,17 @@ class Agent(object):
         return self.postprocess_action(pi)
 
     @functools.partial(jax.jit, static_argnums=0)
-    def actor_step(self, rng, params, critic, state, opt_state):
-        def loss_fn(actor_params):
-            mu, log_sig = self.actor.apply(actor_params, state)
-            pi = mu + jax.random.normal(rng, mu.shape) * jnp.exp(log_sig)
-            log_p = gaussian_likelihood(pi, mu, log_sig)
-            pi = jnp.tanh(pi)
-            log_p -= jnp.sum(jnp.log(nn.relu(1 - pi ** 2) + 1e-6), axis=1)
-            actor_action = self.postprocess_action(pi)
+    def get_td_target(
+        self, next_obs, reward, not_done, actor, critic_target,
+    ):
+        mu, _ = self.actor.apply(actor, next_obs)
+        next_action = 2 * jnp.tanh(mu)
 
-            q1, q2 = self.critic.apply(critic, state, actor_action)
-            min_q = jnp.minimum(q1, q2)
-            partial_loss_fn = jax.vmap(functools.partial(actor_loss_fn))
-            actor_loss = partial_loss_fn(log_p, min_q)
-            return jnp.mean(actor_loss), log_p
+        target_Q1, target_Q2 = self.critic.apply(critic_target, next_obs, next_action)
+        target_Q = jnp.minimum(target_Q1, target_Q2)
+        target_Q = reward + not_done * self.discount * target_Q
 
-        gradient, log_p = jax.grad(loss_fn, has_aux=True)(params)
-        updates, opt_state = self.actor_opt_update(gradient, opt_state)
-        new_params = optix.apply_updates(params, updates)
-        return new_params, opt_state
+        return target_Q
 
 
 def actor_loss_fn(log_p, min_q):
@@ -254,3 +211,8 @@ def gaussian_likelihood(sample, mu, log_sig):
         + jnp.log(2 * np.pi)
     )
     return jnp.sum(pre_sum, axis=1)
+
+
+@jax.vmap
+def double_mse(q1, q2, qt):
+    return jnp.square(qt - q1).mean() + jnp.square(qt - q2).mean()
