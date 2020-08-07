@@ -8,8 +8,8 @@ import jax
 import numpy as np
 import ray
 from flax import serialization
-from flax.serialization import msgpack_serialize
-from haiku.data_structures import to_mutable_dict
+from flax.serialization import msgpack_serialize, msgpack_restore
+from haiku.data_structures import to_mutable_dict, to_immutable_dict
 from jax import numpy as jnp
 from ray import tune
 from ray.tune.suggest.hyperopt import HyperOptSearch
@@ -34,7 +34,7 @@ class Trainer:
         save_dir=None,
         **kwargs,
     ):
-        self.save_dir = save_dir
+        self._save_dir = save_dir
         self.use_tune = use_tune
         self.max_timesteps = int(max_timesteps) if max_timesteps else None
         self.eval_freq = int(eval_freq)
@@ -182,7 +182,6 @@ class Trainer:
         evaluations = [eval_reward]
         best_performance = eval_reward
         best_params = params
-        self.save(0, params)
 
         step = env_loop.send(self.env.action_space.sample())
         for t in range(self.max_timesteps) if self.max_timesteps else itertools.count():
@@ -208,7 +207,8 @@ class Trainer:
                 if best_performance is None or evaluations[-1] > best_performance:
                     best_performance = evaluations[-1]
                     best_params = params
-                    self.save(t, params)
+                    if self.use_tune or self._save_dir:
+                        self.save(t, params)
 
         # At the end, re-evaluate the policy which is presumed to be best. This ensures an un-biased estimator when
         # reporting the average best results across each run.
@@ -238,10 +238,19 @@ class Trainer:
 
         return avg_reward
 
-    def save(self, t, params):
+    def save_dir(self, t=None):
         if self.use_tune:
             with tune.checkpoint_dir(step=t) as save_dir:
-                self.save_dir = Path(save_dir)
+                return Path(save_dir)
+        return self._save_dir
 
-        with Path(self.save_dir, "params").open("wb") as fp:
+    def save(self, t, params):
+        with Path(self.save_dir(t), "params").open("wb") as fp:
             fp.write(msgpack_serialize(to_mutable_dict(params)))
+
+    def load(self, path):
+        with Path(path, "params").open("rb") as fp:
+            _bytes = fp.read()
+            restored = msgpack_restore(_bytes)
+            params = to_immutable_dict(restored)
+            return params
