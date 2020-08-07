@@ -3,11 +3,13 @@
   "discount": 0.99,
   "env_id": "Pendulum-v0",
   "eval_freq": 5000.0,
-  "lr": 0.0003,
-  "max_timesteps": 1000000.0,
+  "initial_log_alpha": -10,
+  "lr": 0.0005,
+  "max_timesteps": 70000,
   "policy_freq": 1,
   "replay_size": 200000,
-  "seed": 0,
-  "start_timesteps": 10,
+  "save_dir": null,
+  "seed": 6,
+  "start_timesteps": 50,
   "use_tune": true
 }

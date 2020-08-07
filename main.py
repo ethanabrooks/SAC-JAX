@@ -2,6 +2,7 @@
     Credits: https://github.com/sfujim/TD3
 """
 import argparse
+from pathlib import Path
 from typing import Any
 
 from trainer import Trainer
@@ -35,7 +36,7 @@ def add_arguments(parser):
     parser.add_argument(
         "--start-timesteps", type=int, help="Time steps initial random policy is used",
     )
-    parser.add_argument("--save-dir", help="directory to save model")
+    parser.add_argument("--save-dir", type=Path, help="directory to save model")
     parser.add_argument(
         "config",
         help="name of config file to load from configs/ directory or from configs.configs "

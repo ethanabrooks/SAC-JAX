@@ -7,7 +7,8 @@ import gym
 import jax
 import numpy as np
 import ray
-from flax import serialization
+from flax.serialization import msgpack_serialize, msgpack_restore
+from haiku.data_structures import to_mutable_dict, to_immutable_dict
 from jax import numpy as jnp
 from ray import tune
 from ray.tune.suggest.hyperopt import HyperOptSearch
@@ -15,6 +16,11 @@ from ray.tune.suggest.hyperopt import HyperOptSearch
 import configs
 from agent import Agent
 from replay_buffer import Step, ReplayBuffer
+
+try:
+    import pybullet_envs
+except ImportError:
+    pass
 
 
 class Trainer:
@@ -32,7 +38,7 @@ class Trainer:
         save_dir=None,
         **kwargs,
     ):
-        self.save_dir = save_dir
+        self._save_dir = save_dir
         self.use_tune = use_tune
         self.max_timesteps = int(max_timesteps) if max_timesteps else None
         self.eval_freq = int(eval_freq)
@@ -75,6 +81,7 @@ class Trainer:
         cpus_per_trial,
         **kwargs,
     ):
+        use_tune = use_tune or num_samples
         config = configs.get_config(config)
         config.update(use_tune=use_tune)
         for k, v in kwargs.items():
@@ -211,7 +218,9 @@ class Trainer:
                 if best_performance is None or evaluations[-1] > best_performance:
                     best_performance = evaluations[-1]
                     best_params = params
-                    # self.save(t, params)
+                    save_dir = self.save_dir(t)
+                    if save_dir:
+                        self.save(save_dir)
 
         # At the end, re-evaluate the policy which is presumed to be best. This ensures an un-biased estimator when
         # reporting the average best results across each run.
@@ -241,9 +250,17 @@ class Trainer:
 
         return avg_reward
 
-    def save(self, t, params):
-        with tune.checkpoint_dir(
-            step=t
-        ) if self.use_tune else self.save_dir as checkpoint_dir:
-            with Path(checkpoint_dir, "params").open("wb") as fp:
-                fp.write(serialization.to_bytes(params))
+    def save_dir(self, t=None):
+        if self.use_tune:
+            with tune.checkpoint_dir(step=t) as save_dir:
+                return Path(save_dir)
+        return self._save_dir
+
+    def save(self, path: Path):
+        with Path(path, "params").open("wb") as fp:
+            fp.write(msgpack_serialize(to_mutable_dict(params)))
+
+    @staticmethod
+    def load(path):
+        with Path(path, "params").open("rb") as fp:
+            return to_immutable_dict(msgpack_restore(fp.read()))
