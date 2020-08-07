@@ -46,12 +46,18 @@ class Trainer:
 
         self.report(env=env_id, seed=seed)
 
-        self.env = gym.make(self.env_id)
+        self.env = self.make_env()
         self.env.seed(seed)
         self.env.action_space.np_random.seed(seed)
         self.env.observation_space.np_random.seed(seed)
         self.obs_dim = int(np.prod(self.env.action_space.shape))
-        self.agent = Agent(
+        self.agent = self.build_agent(kwargs)
+
+    def make_env(self):
+        return gym.make(self.env_id)
+
+    def build_agent(self, kwargs):
+        return Agent(
             max_action=self.env.action_space.high,
             min_action=self.env.action_space.low,
             action_dim=int(np.prod(self.env.action_space.shape)),
@@ -214,7 +220,7 @@ class Trainer:
         self.report(final_reward=self.eval_policy(params))
 
     def eval_policy(self, params) -> float:
-        eval_env = gym.make(self.env_id)
+        eval_env = self.make_env()
 
         avg_reward = 0.0
         for _ in range(self.eval_episodes):

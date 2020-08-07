@@ -4,9 +4,9 @@ import numpy as np
 
 from gym.wrappers import TimeLimit
 
-from args import add_arguments
 from l2b_agent import L2bAgent
 from l2b_env import L2bEnv, CatObsSpace, DoubleReplayBuffer
+from main import add_arguments
 from trainer import Trainer
 
 

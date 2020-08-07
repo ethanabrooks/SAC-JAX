@@ -10,12 +10,7 @@ from agent import Agent
 
 
 class ContextEncoder(hk.Module):
-    def __init__(self, obs_size: int, context_length: int):
-        super(ContextEncoder, self).__init__()
-        self.context_length = context_length
-        self.obs_size = obs_size
-
-    def __call__(self, obs: np.ndarray) -> jnp.DeviceArray:
+    def __call__(self, obs: np.ndarray, context_length, obs_size) -> jnp.DeviceArray:
         encoder = hk.Sequential(
             [
                 hk.Linear(
@@ -33,8 +28,8 @@ class ContextEncoder(hk.Module):
                 ),
             ]
         )
-        s, c = jnp.split(obs, [self.obs_size], axis=-1)
-        c = c.reshape(*s.shape[:-1], self.context_length, -1)
+        s, c = jnp.split(obs, [obs_size], axis=-1)
+        c = c.reshape(*s.shape[:-1], context_length, -1)
         e = encoder(c)
         e = e.mean(axis=-1)
         se = jnp.concatenate([s, e], axis=-1)
@@ -42,25 +37,19 @@ class ContextEncoder(hk.Module):
 
 
 class Actor(networks.Actor):
-    def __init__(self, obs_size: int, context_length: int, **kwargs):
-        super(Actor, self).__init__(**kwargs)
-        self.encoder = ContextEncoder(obs_size, context_length)
-
-    def __call__(self, obs: np.ndarray, rng) -> jnp.DeviceArray:
-        obs = self.encoder(obs)
-        return super().__call__(obs, rng)
+    def __call__(
+        self, obs: np.ndarray, action_dim, *args, **kwargs
+    ) -> Tuple[jnp.DeviceArray, jnp.DeviceArray]:
+        obs = ContextEncoder()(obs, *args, **kwargs)
+        return super().__call__(obs, action_dim)
 
 
 class Critic(networks.Critic):
-    def __init__(self, obs_size: int, context_length: int):
-        super(Critic, self).__init__()
-        self.encoder = ContextEncoder(obs_size, context_length)
-
     def __call__(
-        self, obs: np.ndarray, action: np.ndarray
+        self, obs: np.ndarray, action_dim, *args, **kwargs
     ) -> Tuple[jnp.DeviceArray, jnp.DeviceArray]:
-        obs = self.encoder(obs)
-        return super().__call__(obs, action)
+        obs = ContextEncoder()(obs, *args, **kwargs)
+        return super().__call__(obs, action_dim)
 
 
 class L2bAgent(Agent):
@@ -69,15 +58,10 @@ class L2bAgent(Agent):
         self.context_length = context_length
         self.obs_size = obs_size
 
-    def actor(self, x, r=None):
-        return Actor(
-            obs_size=self.obs_size,
-            context_length=self.context_length,
-            action_dim=self.action_dim,
-            min_action=self.min_action,
-            max_action=self.max_action,
-            noise_clip=self.noise_clip,
-        )(x, r)
+    def actor(self, x):
+        return Actor()(
+            x, action_dim=self.action_dim, context_length=self.context_length
+        )
 
     def critic(self, x, a):
-        return Critic(obs_size=self.obs_size, context_length=self.context_length)(x, a)
+        return Critic()(x, a, context_length=self.context_length)

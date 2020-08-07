@@ -1,18 +1,13 @@
 import itertools
-from pathlib import Path
 from typing import Generator
 
 import gym
 import jax
 import jax.numpy as jnp
 import numpy as np
-from flax import serialization
-from gym.wrappers import TimeLimit
-from ray import tune
 
-from debug_env import DebugEnv
 from replay_buffer import ReplayBuffer, Sample, Step
-from trainer import Trainer, Loops
+from trainer import Trainer
 
 
 class CatObsSpace(gym.ObservationWrapper):
@@ -92,27 +87,27 @@ class L2bEnv(Trainer, gym.Env):
     def _generator(self, rng,) -> Generator:
         self.replay_buffer.size = 0
         self.replay_buffer.ptr = 0
-        loop = Loops(
-            env=self.env_loop(report_loop=self.report_loop()),
-            train=self.agent.train_loop(
-                rng, sample_obs=self.env.observation_space.sample()
-            ),
+        env_loop = self.env_loop()
+        train_loop = self.agent.train_loop(
+            rng,
+            sample_obs=self.env.observation_space.sample(),
+            sample_action=self.env.action_space.sample(),
         )
-        next(loop.env)
-        params = next(loop.train)
+        next(env_loop)
+        params = next(train_loop)
         con = np.stack(list(self.get_context(params)))
-        step = loop.env.send(self.env.action_space.sample())
+        step = env_loop.send(self.env.action_space.sample())
         best_reward = None
         for t in range(self.max_timesteps) if self.max_timesteps else itertools.count():
             self.replay_buffer.add(step)
             obs = step.obs, con
             action = yield obs, self.alpha * step.reward, False, {}
-            step = loop.env.send(action)
+            step = env_loop.send(action)
             if (t + 1) % self.update_freq == 0:
                 for _ in range(self.update_freq):
                     rng, update_rng = jax.random.split(rng)
                     sample = self.replay_buffer.sample(self.batch_size, rng=rng)
-                    params = loop.train.send(sample)
+                    params = train_loop.send(sample)
                 con = np.stack(list(self.get_context(params)))
 
                 if (t + 1) % self.update_freq == 0:
@@ -138,7 +133,7 @@ class L2bEnv(Trainer, gym.Env):
         s1 = next(env_loop)
         for _ in range(self.context_length):
             self.rng, noise_rng = jax.random.split(self.rng)
-            a = self.act(params, s1, noise_rng)
+            a = self.agent.policy(params, s1, noise_rng)
             s2 = env_loop.send(a).obs
             yield np.concatenate([s1, a, s2], axis=-1)
             s1 = s2
