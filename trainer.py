@@ -207,8 +207,9 @@ class Trainer:
                 if best_performance is None or evaluations[-1] > best_performance:
                     best_performance = evaluations[-1]
                     best_params = params
-                    if self.use_tune or self._save_dir:
-                        self.save(t, params)
+                    save_dir = self.save_dir(t)
+                    if save_dir:
+                        self.save(save_dir)
 
         # At the end, re-evaluate the policy which is presumed to be best. This ensures an un-biased estimator when
         # reporting the average best results across each run.
@@ -244,13 +245,11 @@ class Trainer:
                 return Path(save_dir)
         return self._save_dir
 
-    def save(self, t, params):
-        with Path(self.save_dir(t), "params").open("wb") as fp:
+    def save(self, path: Path):
+        with Path(path, "params").open("wb") as fp:
             fp.write(msgpack_serialize(to_mutable_dict(params)))
 
-    def load(self, path):
+    @staticmethod
+    def load(path):
         with Path(path, "params").open("rb") as fp:
-            _bytes = fp.read()
-            restored = msgpack_restore(_bytes)
-            params = to_immutable_dict(restored)
-            return params
+            return to_immutable_dict(msgpack_restore(fp.read()))
