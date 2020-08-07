@@ -26,6 +26,12 @@ def add_arguments(parser):
     parser.add_argument(
         "--eval-freq", default=5e3, type=int, help="How often (time steps) we evaluate"
     )
+    parser.add_argument(
+        "--initial-log-alpha",
+        default=-3.5,
+        type=float,
+        help="How often (time steps) we evaluate",
+    )
     parser.add_argument("--lr", default=3e-4, type=float)  # Optimizer learning rates
     parser.add_argument(
         "--max-timesteps",

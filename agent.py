@@ -24,9 +24,9 @@ class Agent(object):
         lr: float,
         discount: float,
         policy_freq: int,
-        initial_alpha=-3.5,
+        initial_log_alpha=-3.5,
     ):
-        self.initial_alpha = initial_alpha
+        self.initial_log_alpha = initial_log_alpha
         self.min_action = min_action
         self.action_dim = action_dim
         self.max_action = max_action
@@ -49,7 +49,7 @@ class Agent(object):
         return Critic()(x, a)
 
     def log_alpha(self):
-        return Constant()(self.initial_alpha)
+        return Constant()(self.initial_log_alpha)
 
     def train_loop(
         self, rng: jnp.ndarray, sample_obs: np.ndarray, sample_action: np.ndarray,

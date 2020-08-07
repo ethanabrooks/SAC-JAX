@@ -13,15 +13,9 @@ Beside each requirement, I have stated the version installed on my system for re
 
 ## Example run command
 ```
-python trainer.py
+python main.py pendulum
 ```
-
-The default hyper parameters aren't ideal for all domains.
-Based on some limited testing and intuition, the following values are better than the defaults.
-
-Environment | Command line addition
---- | ---
-Swimmer-v2 | --discount 0.995
+This will select the config specified in `configs/pendulum.json`. Command line arguments can be used to 
 
 ## Results
 

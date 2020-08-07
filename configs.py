@@ -29,6 +29,7 @@ def big_values(start, stop):
 search = dict(
     batch_size=hp.choice("batch_size", medium_values(6, 10)),
     lr=hp.choice("lr", small_values(2, 5) + [3e-4]),
+    initial_log_alpha=hp.choice("initial_log_alpha", [-10, -5, -3.5, -1]),
     policy_freq=hp.choice("policy_freq", [1, 2, 3]),
     seed=hp.randint("seed", 20),
     start_timesteps=hp.choice("start_timesteps", big_values(0, 2)),
