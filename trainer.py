@@ -29,11 +29,11 @@ class Trainer:
         batch_size,
         env_id,
         eval_freq,
-        max_timesteps,
         replay_size,
         seed,
         start_timesteps,
         use_tune,
+        max_timesteps=None,
         eval_episodes=100,
         save_dir=None,
         **kwargs,
@@ -220,7 +220,7 @@ class Trainer:
                     best_params = params
                     save_dir = self.save_dir(t)
                     if save_dir:
-                        self.save(save_dir)
+                        self.save(save_dir, params)
 
         # At the end, re-evaluate the policy which is presumed to be best. This ensures an un-biased estimator when
         # reporting the average best results across each run.
@@ -256,7 +256,7 @@ class Trainer:
                 return Path(save_dir)
         return self._save_dir
 
-    def save(self, path: Path):
+    def save(self, path: Path, params):
         with Path(path, "params").open("wb") as fp:
             fp.write(msgpack_serialize(to_mutable_dict(params)))
 

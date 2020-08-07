@@ -49,13 +49,12 @@ pendulum = {
 }
 
 search = dict(
-    batch_size=hp.choice("batch_size", medium_values(6, 10)),
-    expl_noise=hp.choice("expl_noise", small_values(1, 3)),
-    noise_clip=hp.choice("noise_clip", small_values(1, 3)),
+    batch_size=hp.choice("batch_size", medium_values(5, 10)),
     lr=hp.choice("lr", small_values(2, 5) + [3e-4]),
-    policy_freq=hp.choice("policy_freq", [1, 2, 3]),
+    initial_log_alpha=hp.choice("initial_log_alpha", [-50, -20, -10, -5, -3.5]),
+    policy_freq=hp.choice("policy_freq", [1, 2]),
     seed=hp.randint("seed", 20),
-    start_timesteps=hp.choice("start_timesteps", big_values(0, 2)),
+    start_timesteps=hp.choice("start_timesteps", big_values(0, 1)),
     eval_freq=5000,
     max_timesteps=None,
     replay_size=200000,

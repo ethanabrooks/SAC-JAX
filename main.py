@@ -19,6 +19,9 @@ def add_arguments(parser):
         "--env", dest="env_id", help="OpenAI gym environment name",
     )
     parser.add_argument(
+        "--eval-episodes", type=int, help="How many episodes of evaluation to perform"
+    )
+    parser.add_argument(
         "--eval-freq", type=int, help="How often (time steps) we evaluate"
     )
     parser.add_argument(
