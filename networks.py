@@ -3,7 +3,7 @@ from typing import Tuple, Union
 import haiku as hk
 import jax
 import numpy as np
-from jax import numpy as jnp
+from jax import numpy as jnp, nn
 from jax.nn import sigmoid
 from jax.random import PRNGKey
 
@@ -24,7 +24,7 @@ class Actor(hk.Module):
         self.min_action = min_action
         self.max_action = max_action
 
-    def __call__(self, obs: T, rng: PRNGKey = None) -> jnp.DeviceArray:
+    def __call__(self, obs: T) -> Tuple[jnp.DeviceArray, jnp.DeviceArray]:
         actor_net = hk.Sequential(
             [
                 hk.Flatten(),
@@ -43,20 +43,21 @@ class Actor(hk.Module):
                 ),
                 jax.nn.relu,
                 hk.Linear(
-                    self.action_dim,
+                    2 * self.action_dim,
                     w_init=hk.initializers.VarianceScaling(
                         scale=2.0, distribution="uniform"
                     ),
                 ),
             ]
         )
+        log_sig_min = -20
+        log_sig_max = 2
         out = actor_net(obs)
-        if rng is not None:
-            out += jax.random.normal(rng, out.shape).clip(
-                -self.noise_clip, self.noise_clip
-            )
+        mu, log_sig = jnp.split(out, 2, axis=-1)
+        log_sig = nn.softplus(log_sig)
+        log_sig = jnp.clip(log_sig, log_sig_min, log_sig_max)
 
-        return sigmoid(out) * (self.max_action - self.min_action) + self.min_action
+        return mu, log_sig
 
 
 class Critic(hk.Module):

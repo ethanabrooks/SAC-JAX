@@ -7,6 +7,7 @@ import haiku._src.typing as hkt
 import jax
 import jax.numpy as jnp
 from gym.spaces import Box
+from jax import nn
 from jax.experimental import optix
 import rlax
 import numpy as np
@@ -64,29 +65,27 @@ class Agent(object):
         self.actor = hk.without_apply_rng(hk.transform(self.actor))
         self.critic = hk.without_apply_rng(hk.transform(self.critic))
 
-    def actor(self, x, rng=None):
+    def actor(self, x):
         return Actor(
             action_dim=self.action_dim,
             min_action=self.min_action,
             max_action=self.max_action,
             noise_clip=self.noise_clip,
-        )(x, rng)
+        )(x)
 
     @staticmethod
     def critic(x, a):
         return Critic()(x, a)
 
     def train_loop(
-        self, rng: jnp.ndarray, sample_obs: np.ndarray,
+        self, rng: jnp.ndarray, sample_obs: np.ndarray, sample_action: np.ndarray,
     ):
         rng, actor_rng, critic_rng = jax.random.split(rng, 3)
         actor_params = target_actor_params = self.actor.init(actor_rng, sample_obs)
         actor_opt_state = self.actor_opt_init(actor_params)
 
-        action = self.actor.apply(actor_params, sample_obs)
-
         critic_params = target_critic_params = self.critic.init(
-            critic_rng, sample_obs, action
+            critic_rng, sample_obs, sample_action
         )
         critic_opt_state = self.critic_opt_init(critic_params)
 
@@ -104,8 +103,15 @@ class Agent(object):
             )
 
             if update % self.policy_freq == 0:
-                actor_params, actor_opt_state = self.update_actor(
-                    actor_params, critic_params, actor_opt_state, sample.obs
+                # actor_params, actor_opt_state = self.update_actor(
+                #     actor_params, critic_params, actor_opt_state, sample.obs
+                # )
+                actor_params, actor_opt_state = self.actor_step(
+                    rng=actor_rng,
+                    params=actor_params,
+                    critic=critic_params,
+                    state=sample.obs,
+                    opt_state=actor_opt_state,
                 )
 
                 target_actor_params = soft_update(target_actor_params, actor_params)
@@ -162,7 +168,7 @@ class Agent(object):
             As this helps stabilize the critic, we also use this for the DDPG update rule.
         """
         # Make sure the noisy action is within the valid bounds.
-        next_action = self.actor.apply(target_actor_params, next_obs, rng)
+        next_action = self.policy(target_actor_params, next_obs, rng)
 
         next_q_1, next_q_2 = self.critic.apply(
             target_critic_params, next_obs, next_action
@@ -201,8 +207,50 @@ class Agent(object):
         new_params = optix.apply_updates(critic_params, updates)
         return new_params, opt_state
 
+    def postprocess_action(self, pi):
+        return jnp.tanh(pi) * (self.max_action - self.min_action) + self.min_action
+
     @functools.partial(jax.jit, static_argnums=0)
     def policy(
         self, actor_params: hk.Params, obs: np.ndarray, rng: PRNGKey = None
     ) -> jnp.DeviceArray:
-        return self.actor.apply(actor_params, obs, rng)
+        mu, log_sig = self.actor.apply(actor_params, obs)
+        pi = mu
+        if rng is not None:
+            pi += jax.random.normal(rng, mu.shape) * jnp.exp(log_sig)
+        return self.postprocess_action(pi)
+
+    @functools.partial(jax.jit, static_argnums=0)
+    def actor_step(self, rng, params, critic, state, opt_state):
+        def loss_fn(actor_params):
+            mu, log_sig = self.actor.apply(actor_params, state)
+            pi = mu + jax.random.normal(rng, mu.shape) * jnp.exp(log_sig)
+            log_p = gaussian_likelihood(pi, mu, log_sig)
+            pi = jnp.tanh(pi)
+            log_p -= jnp.sum(jnp.log(nn.relu(1 - pi ** 2) + 1e-6), axis=1)
+            actor_action = self.postprocess_action(pi)
+
+            q1, q2 = self.critic.apply(critic, state, actor_action)
+            min_q = jnp.minimum(q1, q2)
+            partial_loss_fn = jax.vmap(functools.partial(actor_loss_fn))
+            actor_loss = partial_loss_fn(log_p, min_q)
+            return jnp.mean(actor_loss), log_p
+
+        gradient, log_p = jax.grad(loss_fn, has_aux=True)(params)
+        updates, opt_state = self.actor_opt_update(gradient, opt_state)
+        new_params = optix.apply_updates(params, updates)
+        return new_params, opt_state
+
+
+def actor_loss_fn(log_p, min_q):
+    return (log_p - min_q).mean()
+
+
+@jax.jit
+def gaussian_likelihood(sample, mu, log_sig):
+    pre_sum = -0.5 * (
+        ((sample - mu) / (jnp.exp(log_sig) + 1e-6)) ** 2
+        + 2 * log_sig
+        + jnp.log(2 * np.pi)
+    )
+    return jnp.sum(pre_sum, axis=1)

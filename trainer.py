@@ -210,16 +210,15 @@ class Trainer:
             with Path(checkpoint_dir, "params").open("wb") as fp:
                 fp.write(serialization.to_bytes(params))
 
-    def act(self, params, obs, rng):
-        return self.agent.policy(params, obs, rng)
-
     def train(self):
         rng = self.rng
         replay_buffer = self.build_replay_buffer()
         loop = Loops(
             env=self.env_loop(report_loop=self.report_loop()),
             train=self.agent.train_loop(
-                rng, sample_obs=self.env.observation_space.sample()
+                rng,
+                sample_obs=self.env.observation_space.sample(),
+                sample_action=self.env.action_space.sample(),
             ),
         )
         next(loop.env)
@@ -240,7 +239,7 @@ class Trainer:
             else:
                 # Select action randomly or according to policy
                 rng, noise_rng = jax.random.split(rng)
-                action = self.act(params, step.obs, noise_rng)
+                action = self.agent.policy(params, step.obs, noise_rng)
 
                 # Train agent after collecting sufficient data
                 rng, update_rng = jax.random.split(rng)
@@ -303,6 +302,4 @@ class Trainer:
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
     add_arguments(PARSER)
-    PARSER.add_argument("--std", type=float)
-    PARSER.add_argument("--levels", type=int)
     Trainer.main(**vars(PARSER.parse_args()))
