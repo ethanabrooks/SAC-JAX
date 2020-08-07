@@ -4,22 +4,23 @@
 import argparse
 import itertools
 from dataclasses import dataclass
+from pathlib import Path
 from pprint import pprint
-from typing import Any, Generator, Tuple
+from typing import Any, Generator
 
 import gym
 import jax
 import jax.numpy as jnp
 import numpy as np
 import ray
+from flax import serialization
 from ray import tune
 from ray.tune.suggest.hyperopt import HyperOptSearch
 
 import configs
 from agent import Agent
 from args import add_arguments
-from replay_buffer import ReplayBuffer, Sample, Step
-from debug_env import DebugEnv
+from replay_buffer import ReplayBuffer, Step
 
 OptState = Any
 
@@ -50,8 +51,6 @@ class Trainer:
         seed,
         start_timesteps,
         use_tune,
-        std,
-        levels,
         eval_episodes=100,
         **kwargs,
     ):
@@ -65,8 +64,6 @@ class Trainer:
         self.env_id = env_id
         self.eval_episodes = int(eval_episodes)
         self.policy = policy
-        self.std = std
-        self.levels = levels
         seed = int(seed)
         self.rng = jax.random.PRNGKey(seed)
 
@@ -117,7 +114,7 @@ class Trainer:
                 config[k] = v
         if use_tune:
             local_mode = num_samples is None
-            ray.init(webui_host="127.0.0.1", local_mode=local_mode)
+            ray.init(dashboard_host="127.0.0.1", local_mode=local_mode)
             metric = "final_reward"
 
             def run(c):
@@ -206,8 +203,11 @@ class Trainer:
                 # Reset environment
                 obs, done = env.reset(), False
 
-    def act(self, params, obs, rng):
-        return self.agent.policy(params, obs, rng)
+    @staticmethod
+    def save(t, params):
+        with tune.checkpoint_dir(step=t) as checkpoint_dir:
+            with Path(checkpoint_dir, "params").open("wb") as fp:
+                fp.write(serialization.to_bytes(params))
 
     def train(self):
         rng = self.rng
@@ -215,7 +215,9 @@ class Trainer:
         loop = Loops(
             env=self.env_loop(report_loop=self.report_loop()),
             train=self.agent.train_loop(
-                rng, sample_obs=self.env.observation_space.sample()
+                rng,
+                sample_obs=self.env.observation_space.sample(),
+                sample_action=self.env.action_space.sample(),
             ),
         )
         next(loop.env)
@@ -223,10 +225,10 @@ class Trainer:
 
         # Evaluate untrained policy.
         # We evaluate for 100 episodes as 10 episodes provide a very noisy estimation in some domains.
-        evaluations = []  # TODO
-        best_performance = None
-        best_actor_params = None
-        # if save_model: agent.save(f"./models/{policy}/{file_name}")
+        eval_reward = self.eval_policy(params)
+        self.report(eval_reward=eval_reward)
+        evaluations = [eval_reward]
+        best_performance = eval_reward
 
         step = loop.env.send(self.env.action_space.sample())
         for t in range(self.max_timesteps) if self.max_timesteps else itertools.count():
@@ -236,7 +238,7 @@ class Trainer:
             else:
                 # Select action randomly or according to policy
                 rng, noise_rng = jax.random.split(rng)
-                action = self.act(params, step.obs, noise_rng)
+                action = self.agent.policy(params, step.obs, noise_rng)
 
                 # Train agent after collecting sufficient data
                 rng, update_rng = jax.random.split(rng)
@@ -299,6 +301,4 @@ class Trainer:
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
     add_arguments(PARSER)
-    PARSER.add_argument("--std", type=float)
-    PARSER.add_argument("--levels", type=int)
     Trainer.main(**vars(PARSER.parse_args()))

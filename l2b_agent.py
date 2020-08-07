@@ -46,9 +46,9 @@ class Actor(networks.Actor):
         super(Actor, self).__init__(**kwargs)
         self.encoder = ContextEncoder(obs_size, context_length)
 
-    def __call__(self, obs: np.ndarray) -> jnp.DeviceArray:
+    def __call__(self, obs: np.ndarray, rng) -> jnp.DeviceArray:
         obs = self.encoder(obs)
-        return super().__call__(obs)
+        return super().__call__(obs, rng)
 
 
 class Critic(networks.Critic):
@@ -69,14 +69,15 @@ class L2bAgent(Agent):
         self.context_length = context_length
         self.obs_size = obs_size
 
-    def actor(self, x):
+    def actor(self, x, r=None):
         return Actor(
             obs_size=self.obs_size,
             context_length=self.context_length,
             action_dim=self.action_dim,
             min_action=self.min_action,
             max_action=self.max_action,
-        )(x)
+            noise_clip=self.noise_clip,
+        )(x, r)
 
     def critic(self, x, a):
         return Critic(obs_size=self.obs_size, context_length=self.context_length)(x, a)

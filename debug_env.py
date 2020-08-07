@@ -12,27 +12,36 @@ class DebugEnv(gym.Env):
     def __init__(self, levels: int, std: float):
         self.std = std
         self.random, _ = np_random(0)
-        levels += 1
-        self.embeddings = np.eye(levels)
-        self.acceptable = self.random.random(levels)
+        self.levels = levels
+        states = len(list(self.reward_iterator())) + 1
+        self.max_reward = sum(self.reward_iterator())
+        self.embeddings = np.eye(states)
         self.iterator = None
         self.observation_space = gym.spaces.Box(
-            low=np.zeros(levels), high=np.ones(levels)
+            low=np.zeros(states), high=np.ones(states)
         )
         self.action_space = gym.spaces.Box(low=np.zeros(1), high=np.ones(1))
-        self._max_episode_steps = 2
-        self._render = None
+
+    def reward_iterator(self):
+        for i in range(self.levels):
+            yield i
+            for _ in range(i):
+                yield -1
+        yield self.levels
 
     def seed(self, seed=None):
         self.random, _ = np_random(seed)
 
     def generator(self):
-        r = 1 / len(self.embeddings)
-        action = yield self.embeddings[0], r, False, {}
-        for embedding in self.embeddings[1:-1]:
-            t = self.random.random() < float(action)
+        *rewards, last_reward = [r / self.max_reward for r in self.reward_iterator()]
+        t = False
+        b = True
+        for r, embedding in zip(rewards, self.embeddings):
             action = yield embedding, r, t, {}
-        yield self.embeddings[-1], r, True, {}
+            random = self.random.random()
+            t = random < float(action) if b else random > float(action)
+            b = not b
+        yield self.embeddings[-1], last_reward, True, {}
 
     def step(self, action):
         return self.iterator.send(action)
@@ -43,18 +52,24 @@ class DebugEnv(gym.Env):
         return s
 
     def render(self, mode="human"):
-        self._render()
+        pass
 
 
 def play():
-    env = DebugEnv(levels=100, std=100)
+    env = DebugEnv(levels=5, std=100)
     _ = env.reset()
+    cumulative = 0
     while True:
         # env.render()
         action = float(input("go"))
         _, r, t, i = env.step(action)
+        cumulative += r
         print("reward:", r)
         print("done:", t)
+        if t:
+            print("cumulative", cumulative)
+            cumulative = 0
+            env.reset()
 
 
 if __name__ == "__main__":
