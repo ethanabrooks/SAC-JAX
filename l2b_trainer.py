@@ -116,11 +116,10 @@ if __name__ == "__main__":
         conflict_handler="resolve",
         single_list=[
             "config",
-            "--alpha",
+            "--initial-log-alpha",
             "--no-tune",
             "--num-samples",
             "--name",
-            "--best",
             "--sample-done-prob",
             "--update-freq",
             "--context-length",
