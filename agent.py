@@ -43,12 +43,7 @@ class Agent(object):
         self.critic = hk.without_apply_rng(hk.transform(self.critic))
 
     def actor(self, x):
-        return Actor(
-            action_dim=self.action_dim,
-            min_action=self.min_action,
-            max_action=self.max_action,
-            noise_clip=self.noise_clip,
-        )(x)
+        return Actor()(x, action_dim=self.action_dim)
 
     @staticmethod
     def critic(x, a):
