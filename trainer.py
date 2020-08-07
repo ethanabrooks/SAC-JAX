@@ -180,6 +180,7 @@ class Trainer:
         evaluations = [eval_reward]
         best_performance = eval_reward
         best_params = params
+        self.save(0, params)
 
         step = env_loop.send(self.env.action_space.sample())
         for t in range(self.max_timesteps) if self.max_timesteps else itertools.count():
@@ -205,7 +206,7 @@ class Trainer:
                 if best_performance is None or evaluations[-1] > best_performance:
                     best_performance = evaluations[-1]
                     best_params = params
-                    # self.save(t, params)
+                    self.save(t, params)
 
         # At the end, re-evaluate the policy which is presumed to be best. This ensures an un-biased estimator when
         # reporting the average best results across each run.
@@ -236,8 +237,9 @@ class Trainer:
         return avg_reward
 
     def save(self, t, params):
-        with tune.checkpoint_dir(
-            step=t
-        ) if self.use_tune else self.save_dir as checkpoint_dir:
-            with Path(checkpoint_dir, "params").open("wb") as fp:
-                fp.write(serialization.to_bytes(params))
+        if self.use_tune:
+            with tune.checkpoint_dir(step=t) as save_dir:
+                self.save_dir = Path(save_dir)
+
+        with Path(self.save_dir, "params").open("wb") as fp:
+            fp.write(serialization.to_bytes(params))
