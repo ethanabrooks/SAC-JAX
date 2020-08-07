@@ -3,7 +3,10 @@ A JAX Implementation of the [Soft Actor Critic](https://arxiv.org/pdf/1801.01290
 
 
 ## Requirements
-Best run in docker: `docker build --tag=<your-tag> .`
+Best run in docker: 
+```
+docker build --tag=<your-tag> .
+```
 For requirement details consult `environment.yml` and `Dockerfile`.
 
 ## Example run command
