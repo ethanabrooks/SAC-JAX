@@ -18,14 +18,11 @@ class Agent(object):
 
     def __init__(
         self,
-        policy: str,
         min_action: np.array,
         max_action: np.array,
         action_dim: int,
         lr: float,
         discount: float,
-        noise_clip: float,
-        policy_noise: float,
         policy_freq: int,
         initial_alpha=-3.5,
     ):
@@ -35,17 +32,14 @@ class Agent(object):
         self.max_action = max_action
         self.lr = lr
         self.discount = discount
-        self.noise_clip = noise_clip
-        self.policy_noise = policy_noise
         self.policy_freq = policy_freq
-        self.td3_update = policy == "TD3"
+        self.target_entropy = -action_dim
         self.actor_opt_init, self.actor_opt_update = optix.adam(lr)
         self.critic_opt_init, self.critic_opt_update = optix.adam(lr)
+        self.alpha_opt_init, self.critic_opt_update = optix.adam(lr)
         self.actor = hk.without_apply_rng(hk.transform(self.actor))
         self.critic = hk.without_apply_rng(hk.transform(self.critic))
         self.log_alpha = hk.without_apply_rng(hk.transform(self.log_alpha))
-        self.alpha_opt_init, self.critic_opt_update = optix.adam(lr)
-        self.target_entropy = -action_dim
 
     def actor(self, x):
         return Actor()(x, action_dim=self.action_dim)

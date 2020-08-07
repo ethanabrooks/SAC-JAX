@@ -11,53 +11,77 @@ OptState = Any
 
 def add_arguments(parser):
     parser.add_argument(
-        "--batch-size", default=256, type=int
-    )  # Batch size for both actor and critic
+        "--batch-size",
+        default=256,
+        type=int,
+        help="Batch size for both actor and critic",
+    )
     parser.add_argument("--discount", default=0.99, type=float)  # Discount factor
     parser.add_argument(
-        "--env", dest="env_id", default="Pendulum-v0"
-    )  # OpenAI gym environment name
+        "--env",
+        dest="env_id",
+        default="Pendulum-v0",
+        help="OpenAI gym environment name",
+    )
     parser.add_argument(
-        "--eval-freq", default=5e3, type=int
-    )  # How often (time steps) we evaluate
-    parser.add_argument(
-        "--expl-noise", default=0.1, type=float
-    )  # Std of Gaussian exploration noise
+        "--eval-freq", default=5e3, type=int, help="How often (time steps) we evaluate"
+    )
     parser.add_argument("--lr", default=3e-4, type=float)  # Optimizer learning rates
     parser.add_argument(
-        "--max-timesteps", default=1e6, type=int
-    )  # Max time steps to run environment
+        "--max-timesteps",
+        default=1e6,
+        type=int,
+        help="Max time steps to run environment",
+    )
     parser.add_argument(
-        "--noise-clip", default=0.5, type=float
-    )  # Range to clip target policy noise
+        "--policy-freq", default=2, type=int, help="Frequency of delayed policy updates"
+    )
     parser.add_argument(
-        "--policy", default="TD3", choices=["TD3", "DDPG"]
-    )  # Policy name (TD3, DDPG)
+        "--replay-size", default=200000, type=int, help="Size of the replay buffer"
+    )
     parser.add_argument(
-        "--policy-freq", default=2, type=int
-    )  # Frequency of delayed policy updates
+        "--seed", type=int, default=0, help="Sets Gym, PyTorch and Numpy seeds"
+    )
     parser.add_argument(
-        "--policy-noise", default=0.2, type=float
-    )  # Noise added to target policy during critic update
+        "--start-timesteps",
+        default=25000,
+        type=int,
+        help="Time steps initial random policy is used",
+    )
+    parser.add_argument("--save-dir", help="directory to save model")
     parser.add_argument(
-        "--replay-size", default=200000, type=int
-    )  # Size of the replay buffer
+        "config",
+        help="name of config file to load from configs/ directory or from configs.configs "
+        "dict",
+    )
+    parser.add_argument("--name", help="name of experiment (for tune)")
     parser.add_argument(
-        "--seed", type=int, default=0
-    )  # Sets Gym, PyTorch and Numpy seeds
+        "--num-samples",
+        "-n",
+        type=int,
+        help="Number of times to sample from the hyperparameter space. See tune docs for details: "
+        "https://docs.ray.io/en/latest/tune/api_docs/execution.html?highlight=run#ray.tune.run",
+    )
     parser.add_argument(
-        "--start-timesteps", default=25000, type=int
-    )  # Time steps initial random policy is used
-    # TODO: Model saving and loading is not supported yet.
-    # parser.add_argument("--save_model", action="store-true")  # Save model and optimizer parameters
-    # parser.add_argument("--load-model", default="")  # Model load file name, "" doesn't load, "default" uses file_name
-    parser.add_argument("config")
-    parser.add_argument("--best")
-    parser.add_argument("--name")
-    parser.add_argument("--num-samples", "-n", type=int)
-    parser.add_argument("--no-tune", dest="use_tune", action="store_false")
-    parser.add_argument("--cpus-per-trial", "-c", type=int, default=6)
-    parser.add_argument("--gpus-per-trial", "-g", type=int, default=1)
+        "--tune",
+        dest="use_tune",
+        action="store_true",
+        help="Use tune for logging and hyperparameter search",
+    )
+    parser.add_argument(
+        "--cpus-per-trial",
+        "-c",
+        type=int,
+        default=6,
+        help="This parameters is used by tune to " "determine how many runs to launch.",
+    )
+    parser.add_argument(
+        "--gpus-per-trial",
+        "-g",
+        type=int,
+        default=1,
+        help="This parameters is used by tune to " "determine how many runs to launch.",
+    )
 
 
 if __name__ == "__main__":

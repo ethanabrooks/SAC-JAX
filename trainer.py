@@ -23,18 +23,17 @@ class Trainer:
         batch_size,
         env_id,
         eval_freq,
-        expl_noise,
         max_timesteps,
-        policy,
         replay_size,
         seed,
         start_timesteps,
         use_tune,
         eval_episodes=100,
+        save_dir=None,
         **kwargs,
     ):
+        self.save_dir = save_dir
         self.use_tune = use_tune
-        self.expl_noise = expl_noise
         self.max_timesteps = int(max_timesteps) if max_timesteps else None
         self.eval_freq = int(eval_freq)
         self.start_timesteps = int(start_timesteps)
@@ -42,30 +41,20 @@ class Trainer:
         self.replay_size = int(replay_size)
         self.env_id = env_id
         self.eval_episodes = int(eval_episodes)
-        self.policy = policy
         seed = int(seed)
         self.rng = jax.random.PRNGKey(seed)
 
-        self.report(policy=policy, env=env_id, seed=seed)
-
-        # if save_model and not os.path.exists("./models/" + policy):
-        #     os.makedirs("./models/" + policy)
+        self.report(env=env_id, seed=seed)
 
         self.env = gym.make(self.env_id)
         self.env.seed(seed)
         self.env.action_space.np_random.seed(seed)
         self.env.observation_space.np_random.seed(seed)
-        self.max_action = self.env.action_space.high
-        self.min_action = self.env.action_space.low
-        self.action_dim = int(np.prod(self.env.action_space.shape))
         self.obs_dim = int(np.prod(self.env.action_space.shape))
-        self.agent = self.build_agent(**kwargs, policy=policy)
-
-    def build_agent(self, **kwargs):
-        return Agent(
-            max_action=self.max_action,
-            min_action=self.min_action,
-            action_dim=self.action_dim,
+        self.agent = Agent(
+            max_action=self.env.action_space.high,
+            min_action=self.env.action_space.low,
+            action_dim=int(np.prod(self.env.action_space.shape)),
             **kwargs,
         )
 
@@ -73,7 +62,6 @@ class Trainer:
     def main(
         cls,
         config,
-        best,
         use_tune,
         num_samples,
         name,
@@ -98,11 +86,8 @@ class Trainer:
             resources_per_trial = {"gpu": gpus_per_trial, "cpu": cpus_per_trial}
             kwargs = dict()
             if not local_mode:
-                points_to_evaluate = None if best is None else [getattr(configs, best)]
                 kwargs = dict(
-                    search_alg=HyperOptSearch(
-                        config, metric=metric, points_to_evaluate=points_to_evaluate
-                    ),
+                    search_alg=HyperOptSearch(config, metric=metric),
                     num_samples=num_samples,
                 )
             tune.run(
@@ -171,12 +156,6 @@ class Trainer:
                 episode_timesteps = 0
                 episode_num += 1
 
-    @staticmethod
-    def save(t, params):
-        with tune.checkpoint_dir(step=t) as checkpoint_dir:
-            with Path(checkpoint_dir, "params").open("wb") as fp:
-                fp.write(serialization.to_bytes(params))
-
     def train(self):
         rng = self.rng
         replay_buffer = ReplayBuffer(
@@ -226,6 +205,7 @@ class Trainer:
                 if best_performance is None or evaluations[-1] > best_performance:
                     best_performance = evaluations[-1]
                     best_params = params
+                    self.save(t, params)
 
         # At the end, re-evaluate the policy which is presumed to be best. This ensures an un-biased estimator when
         # reporting the average best results across each run.
@@ -254,3 +234,10 @@ class Trainer:
         avg_reward /= self.eval_episodes
 
         return avg_reward
+
+    def save(self, t, params):
+        with tune.checkpoint_dir(
+            step=t
+        ) if self.use_tune else self.save_dir as checkpoint_dir:
+            with Path(checkpoint_dir, "params").open("wb") as fp:
+                fp.write(serialization.to_bytes(params))
