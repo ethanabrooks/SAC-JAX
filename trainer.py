@@ -9,6 +9,7 @@ import numpy as np
 import ray
 from flax import serialization
 from flax.serialization import msgpack_serialize
+from haiku.data_structures import to_mutable_dict
 from jax import numpy as jnp
 from ray import tune
 from ray.tune.suggest.hyperopt import HyperOptSearch
@@ -243,4 +244,4 @@ class Trainer:
                 self.save_dir = Path(save_dir)
 
         with Path(self.save_dir, "params").open("wb") as fp:
-            fp.write(msgpack_serialize(params))
+            fp.write(msgpack_serialize(to_mutable_dict(params)))
