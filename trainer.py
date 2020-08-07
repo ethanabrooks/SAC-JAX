@@ -2,13 +2,11 @@ import itertools
 from pathlib import Path
 from pprint import pprint
 from typing import Generator
-import pybullet_envs
 
 import gym
 import jax
 import numpy as np
 import ray
-from flax import serialization
 from flax.serialization import msgpack_serialize, msgpack_restore
 from haiku.data_structures import to_mutable_dict, to_immutable_dict
 from jax import numpy as jnp
@@ -18,6 +16,11 @@ from ray.tune.suggest.hyperopt import HyperOptSearch
 import configs
 from agent import Agent
 from replay_buffer import Step, ReplayBuffer
+
+try:
+    import pybullet_envs
+except ImportError:
+    pass
 
 
 class Trainer:
