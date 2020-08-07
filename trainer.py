@@ -2,6 +2,7 @@ import itertools
 from pathlib import Path
 from pprint import pprint
 from typing import Generator
+import pybullet_envs
 
 import gym
 import jax
