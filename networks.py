@@ -43,8 +43,6 @@ class Actor(hk.Module):
                 ),
             ]
         )
-        log_sig_min = -20
-        log_sig_max = 2
         out = actor_net(obs)
         mu, log_sig = jnp.split(out, 2, axis=-1)
         log_sig = nn.softplus(log_sig)
