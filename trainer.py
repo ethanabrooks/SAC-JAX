@@ -226,10 +226,10 @@ class Trainer:
 
         # Evaluate untrained policy.
         # We evaluate for 100 episodes as 10 episodes provide a very noisy estimation in some domains.
-        evaluations = []  # TODO
-        best_performance = None
-        best_actor_params = None
-        # if save_model: agent.save(f"./models/{policy}/{file_name}")
+        eval_reward = self.eval_policy(params)
+        self.report(eval_reward=eval_reward)
+        evaluations = [eval_reward]
+        best_performance = eval_reward
 
         step = loop.env.send(self.env.action_space.sample())
         for t in range(self.max_timesteps) if self.max_timesteps else itertools.count():

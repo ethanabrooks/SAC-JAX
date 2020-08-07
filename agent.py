@@ -1,39 +1,16 @@
+import functools
 import itertools
-from dataclasses import dataclass
-from typing import Any, Tuple
-import haiku as hk
 
-import haiku._src.typing as hkt
+import haiku as hk
 import jax
 import jax.numpy as jnp
-from gym.spaces import Box
+import numpy as np
 from jax import nn
 from jax.experimental import optix
-import rlax
-import numpy as np
 from jax.random import PRNGKey
 
 from networks import Actor, Critic
-import functools
-
-OptState = Any
-
-
-@dataclass
-class Params:
-    t = hkt.Params
-    params: t
-    opt_params: t
-
-
-# Perform Polyak averaging provided two network parameters and the averaging value tau.
-@jax.jit
-def soft_update(
-    target_params: hk.Params, online_params: hk.Params, tau: float = 0.005
-) -> hk.Params:
-    return jax.tree_multimap(
-        lambda x, y: (1 - tau) * x + tau * y, target_params, online_params
-    )
+from util import single_mse, gaussian_likelihood, double_mse, soft_update
 
 
 class Agent(object):
@@ -124,21 +101,6 @@ class Agent(object):
                 target_critic_params = soft_update(target_critic_params, critic_params)
 
     @functools.partial(jax.jit, static_argnums=0)
-    def critic_1(
-        self, critic_params: hk.Params, obs: np.ndarray, action: np.ndarray
-    ) -> jnp.DeviceArray:
-        """Retrieves the result from a single critic network. Relevant for the actor update rule."""
-        return self.critic.apply(critic_params, obs, action)[0].squeeze(-1)
-
-    @functools.partial(jax.jit, static_argnums=0)
-    def actor_loss(
-        self, actor_params: hk.Params, critic_params: hk.Params, obs: np.ndarray
-    ) -> jnp.DeviceArray:
-        """Standard DDPG update rule based on the gradient through a single critic network."""
-        action = self.actor.apply(actor_params, obs)
-        return -jnp.mean(self.critic_1(critic_params, obs, action))
-
-    @functools.partial(jax.jit, static_argnums=0)
     def update_actor(self, rng, params, critic, state, opt_state):
         def loss(actor_params):
             mu, log_sig = self.actor.apply(actor_params, state)
@@ -150,8 +112,7 @@ class Agent(object):
 
             q1, q2 = self.critic.apply(critic, state, actor_action)
             min_q = jnp.minimum(q1, q2)
-            partial_loss_fn = jax.vmap(functools.partial(actor_loss_fn))
-            actor_loss = partial_loss_fn(log_p, min_q)
+            actor_loss = single_mse(log_p, min_q)
             return jnp.mean(actor_loss), log_p
 
         gradient, log_p = jax.grad(loss, has_aux=True)(params)
@@ -197,22 +158,3 @@ class Agent(object):
         target_Q = reward + not_done * self.discount * target_Q
 
         return target_Q
-
-
-def actor_loss_fn(log_p, min_q):
-    return (log_p - min_q).mean()
-
-
-@jax.jit
-def gaussian_likelihood(sample, mu, log_sig):
-    pre_sum = -0.5 * (
-        ((sample - mu) / (jnp.exp(log_sig) + 1e-6)) ** 2
-        + 2 * log_sig
-        + jnp.log(2 * np.pi)
-    )
-    return jnp.sum(pre_sum, axis=1)
-
-
-@jax.vmap
-def double_mse(q1, q2, qt):
-    return jnp.square(qt - q1).mean() + jnp.square(qt - q2).mean()
