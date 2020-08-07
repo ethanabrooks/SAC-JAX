@@ -2,10 +2,10 @@
 
 export CONTAINER_VOLUME="/root/ray_results"
 export RUN_KILL_LABEL="RUN"
-export RUN_DB_PATH="$HOME/runs/td3"
-export RUN_IMAGE_BUILD_PATH="$HOME/TD3-JAX/"
+export RUN_DB_PATH="$HOME/runs/sac"
+export RUN_IMAGE_BUILD_PATH="$HOME/sac-JAX/"
 export RUN_DOCKERFILE_PATH="$RUN_IMAGE_BUILD_PATH/Dockerfile"
-export RUN_IMAGE='td3'
+export RUN_IMAGE='sac'
 export RUN_CONFIG_SCRIPT='config_script.py'
 export RUN_CONFIG_SCRIPT_INTERPRETER='python3'
 export RUN_CONFIG_SCRIPT_INTERPRETER_ARGS='-c'
