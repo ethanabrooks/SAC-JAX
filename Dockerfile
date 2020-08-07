@@ -1,5 +1,4 @@
-ARG BASE=nvcr.io/nvidia/pytorch:19.10-py3
-FROM $BASE
+FROM nvcr.io/nvidia/pytorch:19.10-py3
 
 RUN apt-get update && apt-get install -y rsync  && rm -rf /var/lib/apt/lists/*
 
@@ -7,8 +6,8 @@ COPY ./environment.yml /tmp/environment.yml
 RUN conda env update -f /tmp/environment.yml \
     && conda clean --all -y
 
-ARG PYTHON_VERSION=cp38
-ARG CUDA_VERSION=cuda101
+ENV PYTHON_VERSION=cp38
+ENV CUDA_VERSION=cuda101
 ENV BASE_URL='https://storage.googleapis.com/jax-releases'
 ENV PLATFORM=manylinux2010_x86_64
 RUN pip install --upgrade $BASE_URL/$CUDA_VERSION/jaxlib-0.1.52-$PYTHON_VERSION-none-$PLATFORM.whl
