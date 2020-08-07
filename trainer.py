@@ -205,7 +205,7 @@ class Trainer:
                 if best_performance is None or evaluations[-1] > best_performance:
                     best_performance = evaluations[-1]
                     best_params = params
-                    self.save(t, params)
+                    # self.save(t, params)
 
         # At the end, re-evaluate the policy which is presumed to be best. This ensures an un-biased estimator when
         # reporting the average best results across each run.
