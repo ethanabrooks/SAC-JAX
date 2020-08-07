@@ -6,7 +6,7 @@ import itertools
 from dataclasses import dataclass
 from pathlib import Path
 from pprint import pprint
-from typing import Any, Generator, Tuple
+from typing import Any, Generator
 
 import gym
 import jax
@@ -20,8 +20,7 @@ from ray.tune.suggest.hyperopt import HyperOptSearch
 import configs
 from agent import Agent
 from args import add_arguments
-from replay_buffer import ReplayBuffer, Sample, Step
-from debug_env import DebugEnv
+from replay_buffer import ReplayBuffer, Step
 
 OptState = Any
 

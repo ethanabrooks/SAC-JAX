@@ -4,8 +4,6 @@ import haiku as hk
 import jax
 import numpy as np
 from jax import numpy as jnp, nn
-from jax.nn import sigmoid
-from jax.random import PRNGKey
 
 """
     Actor and Critic networks defined as in the TD3 paper (Fujimoto et. al.) https://arxiv.org/abs/1802.09477
