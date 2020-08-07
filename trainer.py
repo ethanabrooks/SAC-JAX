@@ -72,7 +72,7 @@ class Trainer:
         config = configs.get_config(config)
         config.update(use_tune=use_tune)
         for k, v in kwargs.items():
-            if k not in config:
+            if v is not None:
                 config[k] = v
 
         def run(c):
