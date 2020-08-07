@@ -11,9 +11,7 @@ ENV CUDA_VERSION=cuda101
 ENV BASE_URL='https://storage.googleapis.com/jax-releases'
 ENV PLATFORM=manylinux2010_x86_64
 RUN pip install --upgrade $BASE_URL/$CUDA_VERSION/jaxlib-0.1.52-$PYTHON_VERSION-none-$PLATFORM.whl
-RUN pip install ipdb
 RUN pip install -U https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-0.9.0.dev0-cp38-cp38-manylinux1_x86_64.whl
-RUN pip install flax
 
 
 RUN echo "source activate base" >> /root/.bashrc

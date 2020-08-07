@@ -1,13 +1,10 @@
 name: base
 channels:
   - local
-  - anaconda
-  - conda-forge
   - defaults
 dependencies:
   - _libgcc_mutex=0.1=main
-  - absl-py=0.9.0=py38h32f6830_1
-  - asn1crypto=1.3.0=py38_0
+  - asn1crypto=1.4.0=py_0
   - attrs=19.3.0=py_0
   - backcall=0.2.0=py_0
   - beautifulsoup4=4.9.1=py38_0
@@ -30,7 +27,6 @@ dependencies:
   - decorator=4.4.2=py_0
   - dill=0.3.2=py_0
   - expat=2.2.6=he6710b0_0
-  - fastcache=1.1.0=py38h1e0a361_1
   - filelock=3.0.12=py_0
   - glob2=0.7=py_0
   - idna=2.10=py_0
@@ -39,8 +35,6 @@ dependencies:
   - intel-openmp=2019.4=243
   - ipython=7.16.1=py38h5ca1d4c_0
   - ipython_genutils=0.2.0=py38_0
-  - jax=0.1.75=py_0
-  - jaxlib=0.1.52=py38h32f6830_0
   - jedi=0.16.0=py38_0
   - jinja2=2.11.2=py_0
   - jsonschema=3.0.2=py38_0
@@ -55,7 +49,6 @@ dependencies:
   - liblief=0.10.1=he6710b0_0
   - libllvm9=9.0.1=h4a3c616_1
   - libopenblas=0.3.3=h5a2b251_3
-  - libprotobuf=3.12.3=h8b12597_2
   - libssh2=1.8.2=h1ba5d50_0
   - libstdcxx-ng=9.1.0=hdf63c60_0
   - libxml2=2.9.9=hea5a465_1
@@ -74,12 +67,11 @@ dependencies:
   - ninja=1.10.0=py38hfd86e86_0
   - nomkl=3.0=0
   - numba=0.50.1=py38h0573a6f_1
-  - numpy=1.18.5=py38h7130bb8_0
-  - numpy-base=1.18.5=py38h2f8d375_0
+  - numpy=1.19.1=py38h30dfecb_0
+  - numpy-base=1.19.1=py38h75fe3a5_0
   - openblas=0.3.3=3
   - openblas-devel=0.3.3=3
   - openssl=1.1.1g=h7b6447c_0
-  - opt_einsum=3.3.0=py_0
   - pandas=1.0.5=py38h0573a6f_0
   - parso=0.5.1=py_0
   - patchelf=0.9=he6710b0_3
@@ -91,7 +83,6 @@ dependencies:
   - preshed=3.0.2=py38he6710b0_1
   - prompt-toolkit=3.0.5=py_0
   - prompt_toolkit=3.0.5=0
-  - protobuf=3.12.3=py38h950e882_0
   - psutil=5.7.0=py38h7b6447c_0
   - ptyprocess=0.6.0=py38_0
   - py-lief=0.10.1=py38h403a769_0
@@ -101,10 +92,9 @@ dependencies:
   - pyopenssl=19.1.0=py_1
   - pyrsistent=0.16.0=py38h7b6447c_0
   - pysocks=1.7.1=py38_0
-  - python=3.8.3=hcff3b4d_2
+  - python=3.8.5=hcff3b4d_0
   - python-dateutil=2.8.1=py_0
   - python-libarchive-c=2.9=py_0
-  - python_abi=3.8=1_cp38
   - pytz=2019.2=py_0
   - pyyaml=5.3.1=py38h7b6447c_0
   - readline=8.0=h7b6447c_0
@@ -138,28 +128,48 @@ dependencies:
   - zlib=1.2.11=h7b6447c_3
   - zstd=1.3.7=h0b5b093_0
   - pip:
+    - absl-py==0.9.0
     - aiohttp==3.6.2
+    - aioredis==1.3.1
     - async-timeout==3.0.1
+    - blessings==1.7
+    - cachetools==4.1.1
     - click==7.1.2
     - cloudpickle==1.3.0
     - colorama==0.4.3
-    - dm-env==1.2
+    - colorful==0.5.4
+    - cycler==0.10.0
     - dm-haiku==0.0.2
-    - dm-tree==0.1.5
+    - flax==0.2.0
     - future==0.18.2
     - google==3.0.0
-    - grpcio==1.30.0
+    - google-api-core==1.22.0
+    - google-auth==1.20.1
+    - googleapis-common-protos==1.52.0
+    - gpustat==0.6.0
+    - grpcio==1.31.0
     - gym==0.17.2
+    - hiredis==1.1.0
     - hyperopt==0.2.4
+    - kiwisolver==1.2.0
+    - matplotlib==3.3.0
     - multidict==4.7.6
     - networkx==2.4
+    - nvidia-ml-py3==7.352.0
+    - opencensus==0.7.10
+    - opencensus-context==0.1.1
+    - opt-einsum==3.3.0
+    - pillow==7.2.0
+    - prometheus-client==0.8.0
+    - protobuf==3.12.4
     - py-spy==0.3.3
+    - pyasn1==0.4.8
+    - pyasn1-modules==0.2.8
     - pyglet==1.5.0
-    - ray==0.8.6
-    - redis==3.4.1 
-    - "git+git://github.com/deepmind/rlax.git"
+    - pyparsing==2.4.7
+    - redis==3.4.1
+    - rsa==4.6
     - tabulate==0.8.7
     - tensorboardx==2.1
-    - typing-extensions==3.7.4.2
-    - yarl==1.5.0
+    - yarl==1.5.1
 prefix: /opt/conda
