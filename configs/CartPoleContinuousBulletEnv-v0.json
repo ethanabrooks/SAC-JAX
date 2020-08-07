@@ -1,0 +1,14 @@
+{
+  "batch_size": 64,
+  "discount": 0.99,
+  "env_id": "CartPoleContinuousBulletEnv-v0",
+  "eval_freq": 5000,
+  "initial_log_alpha": -10,
+  "lr": 0.001,
+  "max_timesteps": 100000,
+  "policy_freq": 1,
+  "replay_size": 200000,
+  "seed": 14,
+  "start_timesteps": 5,
+  "use_tune": 30
+}
