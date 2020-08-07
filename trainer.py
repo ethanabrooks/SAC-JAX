@@ -72,6 +72,7 @@ class Trainer:
         cpus_per_trial,
         **kwargs,
     ):
+        use_tune = use_tune or num_samples
         config = configs.get_config(config)
         config.update(use_tune=use_tune)
         for k, v in kwargs.items():
