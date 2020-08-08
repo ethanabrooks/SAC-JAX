@@ -1,5 +1,6 @@
 #! /usr/bin/env bash
 
+conda activate sac
 export CONTAINER_VOLUME="/root/ray_results"
 export RUN_KILL_LABEL="RUN"
 export RUN_DB_PATH="$HOME/runs/sac"
