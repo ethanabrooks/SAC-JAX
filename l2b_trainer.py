@@ -22,45 +22,43 @@ class L2bTrainer(Trainer):
         )
 
     @classmethod
-    def run(cls, config: dict):
-        def run(
-            context_length,
-            sample_done_prob,
-            update_freq,
-            use_tune,
-            alpha,
-            levels,
-            dim,
-            std,
-            **kwargs
-        ):
-            inner = re.compile(r"^inner_(.*)")
-            outer = re.compile(r"^outer_(.*)")
+    def run(
+        cls,
+        context_length,
+        sample_done_prob,
+        update_freq,
+        use_tune,
+        alpha,
+        levels,
+        dim,
+        std,
+        **kwargs
+    ):
+        inner = re.compile(r"^inner_(.*)")
+        outer = re.compile(r"^outer_(.*)")
 
-            def get_args(pattern):
-                for k, v in kwargs.items():
-                    if pattern.match(k):
-                        yield pattern.sub(r"\1", k), v
+        def get_args(pattern):
+            for k, v in kwargs.items():
+                if pattern.match(k):
+                    yield pattern.sub(r"\1", k), v
 
-            inner_args = dict(
-                get_args(inner),
-                context_length=context_length,
-                update_freq=update_freq,
-                use_tune=use_tune,
-                alpha=alpha,
-                levels=levels,
-                dim=dim,
-                std=std,
-            )
-            outer_args = dict(
-                **dict(get_args(outer)),
-                sample_done_prob=sample_done_prob,
-                context_length=context_length,
-                use_tune=use_tune,
-            )
-            cls(**outer_args, inner_args=inner_args).train()
-
-        run(**config)
+        inner_args = dict(
+            get_args(inner),
+            context_length=context_length,
+            update_freq=update_freq,
+            use_tune=use_tune,
+            alpha=alpha,
+            levels=levels,
+            dim=dim,
+            std=std,
+        )
+        outer_args = dict(
+            **dict(get_args(outer)),
+            sample_done_prob=sample_done_prob,
+            context_length=context_length,
+            use_tune=use_tune,
+        )
+        cls(**outer_args, inner_args=inner_args).train()
 
     def make_env(self):
         def make_env(max_timesteps, **kwargs):

@@ -71,6 +71,10 @@ class Trainer:
         )
 
     @classmethod
+    def run(cls, **kwargs):
+        return cls(**kwargs).train()
+
+    @classmethod
     def main(
         cls,
         config,
@@ -89,7 +93,7 @@ class Trainer:
                 config[k] = v
 
         def run(c):
-            return cls(**c).train()
+            return cls.run(**c)
 
         if use_tune:
             local_mode = num_samples is None
