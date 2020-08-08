@@ -36,12 +36,13 @@ class DebugEnv(gym.Env):
         *rewards, last_reward = [r / self.max_reward for r in self.reward_iterator()]
         t = False
         b = True
+        action = 0
         for r, embedding in zip(rewards, self.embeddings):
-            action = yield embedding, r, t, {}
+            action = yield embedding, float(action), t, {}
             random = self.random.random()
-            t = random < float(action) if b else random > float(action)
+            # t = random < float(action) if b else random > float(action)
             b = not b
-        yield self.embeddings[-1], last_reward, True, {}
+        yield self.embeddings[-1], float(action), True, {}
 
     def step(self, action):
         return self.iterator.send(action)
