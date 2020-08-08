@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from hyperopt import hp
+from ray import tune
 
 
 def get_config(name):
@@ -38,5 +39,7 @@ search = dict(
     replay_size=200000,
     discount=0.99,
 )
+pendulum_seeds = get_config("pendulum")
+pendulum_seeds.update(seed=tune.grid_search(list(range(8))))
 
-configs = dict(search=search)
+configs = dict(search=search, pendulum_seeds=pendulum_seeds)
