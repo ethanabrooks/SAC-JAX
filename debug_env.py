@@ -23,10 +23,10 @@ class DebugEnv(gym.Env):
 
     def reward_iterator(self):
         for i in range(self.levels):
-            yield i
+            yield 1
             for _ in range(i):
-                yield 0
-        yield self.levels
+                yield 1
+        yield 1
 
     def seed(self, seed=None):
         self.random, _ = np_random(seed)
