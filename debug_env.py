@@ -44,7 +44,6 @@ class DebugEnv(gym.Env):
         yield self.embeddings[-1], last_reward, True, {}
 
     def step(self, action):
-        tune.report(action=action.item())
         return self.iterator.send(action)
 
     def reset(self):
