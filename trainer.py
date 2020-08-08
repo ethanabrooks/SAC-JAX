@@ -250,7 +250,8 @@ class Trainer:
                 return Path(save_dir)
         return self._save_dir
 
-    def save(self, path: Path, params):
+    @staticmethod
+    def save(path: Path, params):
         with Path(path, "params").open("wb") as fp:
             fp.write(msgpack_serialize(to_mutable_dict(params)))
 
