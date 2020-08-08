@@ -33,16 +33,21 @@ class DebugEnv(gym.Env):
         self.random, _ = np_random(seed)
 
     def generator(self):
-        *rewards, last_reward = [r / self.max_reward for r in self.reward_iterator()]
-        t = False
-        b = True
-        action = 0
-        for r, embedding in zip(rewards, self.embeddings):
-            action = yield embedding, float(action), t, {}
-            random = self.random.random()
-            # t = random < float(action) if b else random > float(action)
-            b = not b
-        yield self.embeddings[-1], float(action), True, {}
+        action = yield self.embeddings[0], 0, False, {}
+        random = self.random.random()
+        # t = random < float(action) if b else random > float(action)
+        r = float(action)
+        action = yield self.embeddings[1], r, True, {}
+        # *rewards, last_reward = [r / self.max_reward for r in self.reward_iterator()]
+        # t = False
+        # b = True
+        # action = 0
+        # for r, embedding in zip(rewards, self.embeddings):
+        # action = yield embedding, float(action), t, {}
+        # random = self.random.random()
+        # t = random < float(action) if b else random > float(action)
+        # b = not b
+        # yield self.embeddings[-1], float(action), True, {}
 
     def step(self, action):
         return self.iterator.send(action)
