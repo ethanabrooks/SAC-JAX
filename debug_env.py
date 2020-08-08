@@ -9,8 +9,7 @@ def sigmoid(x):
 
 
 class DebugEnv(gym.Env):
-    def __init__(self, levels: int, std: float):
-        self.std = std
+    def __init__(self, levels: int):
         self.random, _ = np_random(0)
         self.levels = levels
         states = len(list(self.reward_iterator())) + 1
@@ -24,10 +23,10 @@ class DebugEnv(gym.Env):
 
     def reward_iterator(self):
         for i in range(self.levels):
-            yield i
+            yield 1
             for _ in range(i):
-                yield -1
-        yield self.levels
+                yield 1
+        yield 1
 
     def seed(self, seed=None):
         self.random, _ = np_random(seed)
@@ -56,7 +55,7 @@ class DebugEnv(gym.Env):
 
 
 def play():
-    env = DebugEnv(levels=5, std=100)
+    env = DebugEnv(levels=5)
     _ = env.reset()
     cumulative = 0
     while True:
