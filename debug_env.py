@@ -2,6 +2,7 @@ import gym
 import numpy as np
 import jax
 from gym.utils.seeding import np_random
+from ray import tune
 
 
 def sigmoid(x):
@@ -43,6 +44,7 @@ class DebugEnv(gym.Env):
         yield self.embeddings[-1], last_reward, True, {}
 
     def step(self, action):
+        tune.report(action=action.item())
         return self.iterator.send(action)
 
     def reset(self):
@@ -55,7 +57,7 @@ class DebugEnv(gym.Env):
 
 
 def play():
-    env = DebugEnv(levels=1)
+    env = DebugEnv(levels=2)
     _ = env.reset()
     cumulative = 0
     while True:
