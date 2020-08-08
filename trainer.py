@@ -2,6 +2,7 @@ import itertools
 from pathlib import Path
 from pprint import pprint
 from typing import Generator
+from debug_env import DebugEnv
 
 import gym
 import jax
@@ -12,6 +13,7 @@ from haiku.data_structures import to_mutable_dict, to_immutable_dict
 from jax import numpy as jnp
 from ray import tune
 from ray.tune.suggest.hyperopt import HyperOptSearch
+from gym.wrappers import TimeLimit
 
 import configs
 from agent import Agent
@@ -60,7 +62,9 @@ class Trainer:
         self.agent = self.build_agent(kwargs)
 
     def make_env(self):
-        return gym.make(self.env_id)
+        env = DebugEnv(levels=25)
+        return TimeLimit(env, max_episode_steps=len(list(env.reward_iterator())))
+        # return gym.make(self.env_id)
 
     def build_agent(self, kwargs):
         return Agent(
