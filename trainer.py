@@ -35,11 +35,13 @@ class Trainer:
         seed,
         start_timesteps,
         use_tune,
+        levels,
         max_timesteps=None,
         eval_episodes=100,
         save_dir=None,
         **kwargs,
     ):
+        self.levels = levels
         self._save_dir = save_dir
         self.use_tune = use_tune
         self.max_timesteps = int(max_timesteps) if max_timesteps else None
@@ -62,7 +64,7 @@ class Trainer:
         self.agent = self.build_agent(kwargs)
 
     def make_env(self):
-        env = DebugEnv(levels=25)
+        env = DebugEnv(levels=self.levels)
         return TimeLimit(env, max_episode_steps=len(list(env.reward_iterator())))
         # return gym.make(self.env_id)
 
