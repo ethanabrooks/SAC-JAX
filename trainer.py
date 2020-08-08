@@ -64,9 +64,9 @@ class Trainer:
         self.agent = self.build_agent(kwargs)
 
     def make_env(self):
-        env = DebugEnv(levels=self.levels)
-        return TimeLimit(env, max_episode_steps=len(list(env.reward_iterator())))
-        # return gym.make(self.env_id)
+        # env = DebugEnv(levels=self.levels)
+        # return TimeLimit(env, max_episode_steps=len(list(env.reward_iterator())))
+        return gym.make(self.env_id)
 
     def build_agent(self, kwargs):
         return Agent(
