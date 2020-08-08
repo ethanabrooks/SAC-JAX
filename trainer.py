@@ -94,7 +94,7 @@ class Trainer:
             kwargs = dict()
             if not local_mode:
                 kwargs = dict(
-                    search_alg=HyperOptSearch(config, metric=metric),
+                    # search_alg=HyperOptSearch(config, metric=metric),
                     num_samples=num_samples,
                 )
             tune.run(
