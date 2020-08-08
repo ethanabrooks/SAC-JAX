@@ -13,7 +13,7 @@ class DebugEnv(gym.Env):
         self.random, _ = np_random(0)
         self.levels = levels
         states = len(list(self.reward_iterator())) + 1
-        self.max_reward = sum(self.reward_iterator())
+        self.max_reward = sum(self.reward_iterator()) - 1
         self.embeddings = np.eye(states)
         self.iterator = None
         self.observation_space = gym.spaces.Box(
@@ -55,7 +55,7 @@ class DebugEnv(gym.Env):
 
 
 def play():
-    env = DebugEnv(levels=5)
+    env = DebugEnv(levels=1)
     _ = env.reset()
     cumulative = 0
     while True:
