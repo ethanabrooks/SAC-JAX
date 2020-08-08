@@ -172,7 +172,7 @@ class Agent(object):
         return mu + jax.random.normal(rng, mu.shape) * jnp.exp(log_sig)
 
     def postprocess_action(self, pi):
-        return jnp.tanh(pi) * (self.max_action - self.min_action) + self.min_action
+        return nn.sigmoid(pi) * (self.max_action - self.min_action) + self.min_action
 
     @functools.partial(jax.jit, static_argnums=0)
     def policy(
