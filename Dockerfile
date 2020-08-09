@@ -20,4 +20,5 @@ ENV PATH /opt/conda/envs/jax/bin:$PATH
 WORKDIR "/root"
 COPY . .
 COPY entrypoint.sh /
+RUN pip install ipdb
 ENTRYPOINT ["/entrypoint.sh"]

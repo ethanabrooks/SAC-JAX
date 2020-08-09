@@ -13,7 +13,7 @@ from trainer import Trainer
 class TeacherTrainer(Trainer):
     def __init__(self, make_env, *args, **kwargs):
         self._make_env = make_env
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, env_id=None, **kwargs)
 
     @classmethod
     def run(
