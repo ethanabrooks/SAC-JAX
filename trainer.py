@@ -163,6 +163,14 @@ class Trainer:
             )
             obs = next_obs
 
+            self.report(
+                timestep=t + 1,
+                episode=episode_num + 1,
+                episode_timestep=episode_timesteps,
+                reward=episode_reward,
+                **counter,
+            )
+
             if done:
                 obs, done = env.reset(), False
 
