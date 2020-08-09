@@ -1,8 +1,8 @@
 import itertools
+from collections import Counter
 from pathlib import Path
 from pprint import pprint
 from typing import Generator
-from debug_env import DebugEnv
 
 import gym
 import jax
@@ -13,7 +13,6 @@ from haiku.data_structures import to_mutable_dict, to_immutable_dict
 from jax import numpy as jnp
 from ray import tune
 from ray.tune.suggest.hyperopt import HyperOptSearch
-from gym.wrappers import TimeLimit
 
 import configs
 from agent import Agent
@@ -35,13 +34,11 @@ class Trainer:
         seed,
         start_timesteps,
         use_tune,
-        levels,
         max_timesteps=None,
         eval_episodes=100,
         save_dir=None,
         **kwargs,
     ):
-        self.levels = levels
         self._save_dir = save_dir
         self.use_tune = use_tune
         self.max_timesteps = int(max_timesteps) if max_timesteps else None
@@ -61,14 +58,14 @@ class Trainer:
         self.env.action_space.np_random.seed(seed)
         self.env.observation_space.np_random.seed(seed)
         self.obs_dim = int(np.prod(self.env.action_space.shape))
-        self.agent = self.build_agent(kwargs)
+        self.agent = self.build_agent(**kwargs)
 
     def make_env(self):
         # env = DebugEnv(levels=self.levels)
         # return TimeLimit(env, max_episode_steps=len(list(env.reward_iterator())))
         return gym.make(self.env_id)
 
-    def build_agent(self, kwargs):
+    def build_agent(self, **kwargs):
         return Agent(
             max_action=self.env.action_space.high,
             min_action=self.env.action_space.low,
@@ -138,12 +135,14 @@ class Trainer:
         episode_num = 0
 
         action = yield obs
+        counter = Counter()
 
         for t in itertools.count():
             episode_timesteps += 1
 
             # Perform action
-            next_obs, reward, done, _ = env.step(action)
+            next_obs, reward, done, info = env.step(action)
+            counter.update(**info)
             episode_reward += reward
 
             # This 'trick' converts the finite-horizon task into an infinite-horizon one. It does change the problem
@@ -173,11 +172,13 @@ class Trainer:
                     episode=episode_num + 1,
                     episode_timestep=episode_timesteps,
                     reward=episode_reward,
+                    **counter,
                 )
 
                 episode_reward = 0
                 episode_timesteps = 0
                 episode_num += 1
+                counter = Counter()
 
     def train(self):
         rng = self.rng
@@ -198,10 +199,8 @@ class Trainer:
 
         # Evaluate untrained policy.
         # We evaluate for 100 episodes as 10 episodes provide a very noisy estimation in some domains.
-        eval_reward = self.eval_policy(params)
-        self.report(eval_reward=eval_reward)
-        evaluations = [eval_reward]
-        best_performance = eval_reward
+        evaluations = []
+        best_performance = None
         best_params = params
 
         step = env_loop.send(self.env.action_space.sample())

@@ -2,160 +2,95 @@ import itertools
 from typing import Generator
 
 import gym
-import jax
-import jax.numpy as jnp
 import numpy as np
+from gym.utils import seeding
 
-from replay_buffer import ReplayBuffer, Sample, Step
-from trainer import Trainer
-
-
-class CatObsSpace(gym.ObservationWrapper):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        assert isinstance(self.observation_space, gym.spaces.Tuple)
-        self.observation_space = gym.spaces.Box(
-            low=np.concatenate(
-                [space.low.flatten() for space in self.observation_space.spaces]
-            ),
-            high=np.concatenate(
-                [space.high.flatten() for space in self.observation_space.spaces]
-            ),
-        )
-
-    def observation(self, observation):
-        s = np.concatenate([o.flatten() for o in observation])
-        # assert self.observation_space.contains(s)
-        return s
+from ucb import UCB
 
 
-class L2bEnv(Trainer, gym.Env):
+class TeacherEnv(gym.Env):
     def __init__(
-        self, update_freq, context_length, alpha, levels, dim, std, *args, **kwargs
+        self,
+        context_length: int,
+        std: float,
+        choices: int,
+        inner_steps: int,
+        min_reward=-100,
+        max_reward=100,
+        max_action=2,
     ):
-        self.std = std
-        self.dim = dim
-        self.levels = levels
-        super().__init__(*args, **kwargs)
-        self.alpha = alpha
-        self.update_freq = update_freq
+        super().__init__()
+        self.data_size = (inner_steps + 2) * context_length
+        self.std_scale = std
+        self.random, self._seed = seeding.np_random(0)
         self.context_length = context_length
+        self.choices = choices
         self.iterator = None
-        self.observation_space = gym.spaces.Tuple(
-            [self.env.observation_space, self.get_context_space()]
+        self.observation_space = gym.spaces.Box(
+            low=np.array([[0, min_reward]] * self.context_length),
+            high=np.array([[choices - 1, max_reward]] * self.context_length),
         )
-        self.action_space = self.env.action_space
-        self.rng = jax.random.PRNGKey(0)
-        self.replay_buffer = ReplayBuffer(
-            obs_shape=self.env.observation_space.shape,
-            action_shape=self.env.action_space.shape,
-            max_size=self.replay_size,
+        self.action_space = gym.spaces.Box(
+            low=np.zeros(1), high=np.ones(1) * max_action
         )
+        self.ucb = UCB(self._seed)
+
+        self.our_selections = np.zeros((self.data_size, self.choices))
+        self.our_rewards = np.zeros((self.data_size, self.choices))
+        self.their_selections = np.zeros((self.data_size, self.choices))
+        self.their_rewards = np.zeros((self.data_size, self.choices))
+
+        self.dataset = np.zeros((self.data_size, self.choices))
 
     def seed(self, seed=None):
         seed = seed or 0
-        self.rng = jax.random.PRNGKey(seed)
+        self.random, self._seed = seeding.np_random(seed)
+        self.ucb = UCB(self._seed)
 
-    def get_context_space(self):
-        obs = self.env.observation_space
-        act = self.env.action_space
-        assert isinstance(obs, gym.spaces.Box)
-        low = np.tile(
-            np.concatenate([obs.low, act.low, obs.low], axis=-1),
-            (self.context_length, 1),
-        )
-        high = np.tile(
-            np.concatenate([obs.high, act.high, obs.high], axis=-1),
-            (self.context_length, 1),
-        )
-        return gym.spaces.Box(low=low, high=high)
+    def reset(self):
+        self.iterator = self._generator()
+        s, _, _, _ = next(self.iterator)
+        return s
 
     def step(self, action):
         return self.iterator.send(action)
 
-    def reset(self):
-        self.rng, rng = jax.random.split(self.rng)
-        self.iterator = self._generator(rng)
-        s, _, _, _ = next(self.iterator)
-        assert self.observation_space.contains(s)
-        return s
+    def zero_arrays(self):
+        self.our_selections[:] = 0
+        self.our_rewards[:] = 0
+        self.their_selections[:] = 0
+        self.their_rewards[:] = 0
 
-    def _generator(self, rng,) -> Generator:
-        self.replay_buffer.size = 0
-        self.replay_buffer.ptr = 0
-        env_loop = self.env_loop()
-        train_loop = self.agent.train_loop(
-            rng,
-            sample_obs=self.env.observation_space.sample(),
-            sample_action=self.env.action_space.sample(),
+    def _generator(self) -> Generator:
+        means = self.random.random(self.choices)
+        stds = self.random.random(self.choices) * self.std_scale
+        optimal = means.max()
+        means = np.tile(means, (self.data_size, 1))
+        stds = np.tile(stds, (self.data_size, 1))
+
+        self.zero_arrays()
+        self.dataset[:] = self.random.normal(means, stds)
+        our_loop = self.ucb.train_loop(
+            self.dataset, rewards=self.our_rewards, selections=self.our_selections
         )
-        next(env_loop)
-        params = next(train_loop)
-        con = np.stack(list(self.get_context(params)))
-        step = env_loop.send(self.env.action_space.sample())
-        best_reward = None
-        for t in range(self.max_timesteps) if self.max_timesteps else itertools.count():
-            self.replay_buffer.add(step)
-            obs = step.obs, con
-            action = yield obs, self.alpha * step.reward, False, {}
-            step = env_loop.send(action)
-            if (t + 1) % self.update_freq == 0:
-                for _ in range(self.update_freq):
-                    rng, update_rng = jax.random.split(rng)
-                    sample = self.replay_buffer.sample(self.batch_size, rng=rng)
-                    params = train_loop.send(sample)
-                con = np.stack(list(self.get_context(params)))
+        base_loop = self.ucb.train_loop(
+            self.dataset, rewards=self.their_rewards, selections=self.their_selections
+        )
+        next(our_loop)
+        next(base_loop)
+        coefficient = 1
+        for _ in itertools.count():
 
-                if (t + 1) % self.update_freq == 0:
-                    eval_reward = self.eval_policy(params)
-                    self.report(
-                        eval_reward=eval_reward,
-                        actor_linear_b=params["actor/linear"].b.mean().item(),
-                        actor_linear_w=params["actor/linear"].w.mean().item(),
-                        actor_linear_1_b=params["actor/linear_1"].b.mean().item(),
-                        actor_linear_1_w=params["actor/linear_1"].w.mean().item(),
-                        actor_linear_2_b=params["actor/linear_2"].b.mean().item(),
-                        actor_linear_2_w=params["actor/linear_2"].w.mean().item(),
-                    )
-                    if best_reward and eval_reward > best_reward:
-                        best_reward = eval_reward
-                        self.save(t, params)
+            def interact(loop, c):
+                for _ in range(self.context_length):
+                    yield loop.send(c)
 
-        obs = step.obs, con
-        yield obs, self.eval_policy(params), True, {}
-
-    def get_context(self, params):
-        env_loop = self.env_loop(env=self.make_env())
-        s1 = next(env_loop)
-        for _ in range(self.context_length):
-            self.rng, noise_rng = jax.random.split(self.rng)
-            a = self.agent.policy(params, s1, noise_rng)
-            s2 = env_loop.send(a).obs
-            yield np.concatenate([s1, a, s2], axis=-1)
-            s1 = s2
-
-    def get_inner_env(self):
-        return self.env
+            actions, rewards = zip(*interact(our_loop, float(coefficient)))
+            _, baseline_rewards = zip(*interact(base_loop, 1))
+            s = np.array(list(zip(actions, rewards)))
+            r = np.mean(rewards)
+            i = dict(regret=optimal - r, baseline=np.mean(baseline_rewards))
+            coefficient = yield s, r, False, i
 
     def render(self, mode="human"):
         pass
-
-
-class DoubleReplayBuffer(ReplayBuffer):
-    def __init__(self, sample_done_prob, **kwargs):
-        super().__init__(**kwargs)
-        self.sample_done_prob = sample_done_prob
-        self.done_buffer = ReplayBuffer(**kwargs)
-
-    def add(self, step: Step) -> None:
-        if step.done:
-            self.done_buffer.add(step)
-        else:
-            super().add(step)
-
-    def sample(self, batch_size: int, rng: jnp.ndarray) -> Sample:
-        if jax.random.choice(
-            rng, 2, p=[1 - self.sample_done_prob, self.sample_done_prob]
-        ):
-            return self.done_buffer.sample(batch_size, rng)
-        return super().sample(batch_size, rng)

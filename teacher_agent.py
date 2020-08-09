@@ -10,7 +10,7 @@ from agent import Agent
 
 
 class ContextEncoder(hk.Module):
-    def __call__(self, obs: np.ndarray, context_length, obs_size) -> jnp.DeviceArray:
+    def __call__(self, obs: jnp.DeviceArray, context_length) -> jnp.DeviceArray:
         encoder = hk.Sequential(
             [
                 hk.Linear(
@@ -28,17 +28,18 @@ class ContextEncoder(hk.Module):
                 ),
             ]
         )
-        s, c = jnp.split(obs, [obs_size], axis=-1)
-        c = c.reshape(*s.shape[:-1], context_length, -1)
+        # s, c = jnp.split(obs, [obs_size], axis=-1)
+        # c = obs.reshape(*obs.shape[:-1], context_length, -1)
+        c = jnp.reshape(obs, (*obs.shape[:-2], context_length, -1))
         e = encoder(c)
         e = e.mean(axis=-1)
-        se = jnp.concatenate([s, e], axis=-1)
-        return se
+        # se = jnp.concatenate([s, e], axis=-1)
+        return e
 
 
 class Actor(networks.Actor):
     def __call__(
-        self, obs: np.ndarray, action_dim, *args, **kwargs
+        self, obs: jnp.DeviceArray, action_dim, *args, **kwargs
     ) -> Tuple[jnp.DeviceArray, jnp.DeviceArray]:
         obs = ContextEncoder()(obs, *args, **kwargs)
         return super().__call__(obs, action_dim)
@@ -46,17 +47,16 @@ class Actor(networks.Actor):
 
 class Critic(networks.Critic):
     def __call__(
-        self, obs: np.ndarray, action_dim, *args, **kwargs
+        self, obs: jnp.DeviceArray, action_dim, *args, **kwargs
     ) -> Tuple[jnp.DeviceArray, jnp.DeviceArray]:
         obs = ContextEncoder()(obs, *args, **kwargs)
         return super().__call__(obs, action_dim)
 
 
 class L2bAgent(Agent):
-    def __init__(self, *args, obs_size, context_length, **kwargs):
+    def __init__(self, *args, context_length, **kwargs):
         super().__init__(*args, **kwargs)
         self.context_length = context_length
-        self.obs_size = obs_size
 
     def actor(self, x):
         return Actor()(

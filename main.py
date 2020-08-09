@@ -11,7 +11,6 @@ OptState = Any
 
 
 def add_arguments(parser):
-    parser.add_argument("--levels", type=int, required=True)
     parser.add_argument(
         "--batch-size", type=int, help="Batch size for both actor and critic",
     )
