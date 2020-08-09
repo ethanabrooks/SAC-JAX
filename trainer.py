@@ -199,8 +199,9 @@ class Trainer:
 
         # Evaluate untrained policy.
         # We evaluate for 100 episodes as 10 episodes provide a very noisy estimation in some domains.
-        evaluations = []
-        best_performance = None
+        eval_reward = self.eval_policy(params)
+        evaluations = [eval_reward]
+        best_performance = eval_reward
         best_params = params
 
         step = env_loop.send(self.env.action_space.sample())
