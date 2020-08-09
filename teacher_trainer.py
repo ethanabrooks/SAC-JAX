@@ -1,12 +1,11 @@
 import argparse
-import re
-import numpy as np
 
+import numpy as np
 from gym.wrappers import TimeLimit
 
+from main import add_arguments
 from teacher_agent import L2bAgent
 from teacher_env import TeacherEnv
-from main import add_arguments
 from trainer import Trainer
 
 
@@ -17,7 +16,14 @@ class TeacherTrainer(Trainer):
 
     @classmethod
     def run(
-        cls, context_length: int, std: float, choices: int, inner_steps: int, **kwargs
+        cls,
+        context_length: int,
+        std: float,
+        choices: int,
+        inner_steps: int,
+        use_tune,
+        report_freq: int,
+        **kwargs
     ):
         def make_env():
             return TimeLimit(
@@ -26,11 +32,18 @@ class TeacherTrainer(Trainer):
                     std=std,
                     choices=choices,
                     inner_steps=inner_steps,
+                    use_tune=use_tune,
+                    report_freq=report_freq,
                 ),
                 max_episode_steps=inner_steps,
             )
 
-        cls(**kwargs, context_length=context_length, make_env=make_env).train()
+        cls(
+            **kwargs,
+            use_tune=use_tune,
+            context_length=context_length,
+            make_env=make_env,
+        ).train()
 
     def make_env(self):
         return self._make_env()
@@ -49,6 +62,7 @@ if __name__ == "__main__":
     PARSER.add_argument("--context-length", type=int, default=10)
     PARSER.add_argument("--std", type=float, default=1.0)
     PARSER.add_argument("--choices", type=int, default=10)
-    PARSER.add_argument("--inner-steps", type=int, default=int(1e4))
+    PARSER.add_argument("--inner-steps", type=int, default=int(1e3))
+    PARSER.add_argument("--report-freq", type=int, default=10)
     add_arguments(PARSER)
     TeacherTrainer.main(**vars(PARSER.parse_args()))

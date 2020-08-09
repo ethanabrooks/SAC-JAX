@@ -1,9 +1,12 @@
+import collections
 import itertools
+from pprint import pprint
 from typing import Generator
 
 import gym
 import numpy as np
 from gym.utils import seeding
+from ray import tune
 
 from ucb import UCB
 
@@ -15,11 +18,15 @@ class TeacherEnv(gym.Env):
         std: float,
         choices: int,
         inner_steps: int,
+        use_tune: bool,
+        report_freq: int,
         min_reward=-100,
         max_reward=100,
         max_action=2,
     ):
         super().__init__()
+        self.report_freq = report_freq
+        self.use_tune = use_tune
         self.data_size = (inner_steps + 2) * context_length
         self.std_scale = std
         self.random, self._seed = seeding.np_random(0)
@@ -41,6 +48,12 @@ class TeacherEnv(gym.Env):
         self.their_rewards = np.zeros((self.data_size, self.choices))
 
         self.dataset = np.zeros((self.data_size, self.choices))
+
+    def report(self, **kwargs):
+        if self.use_tune:
+            tune.report(**kwargs)
+        else:
+            pprint(kwargs)
 
     def seed(self, seed=None):
         seed = seed or 0
@@ -79,6 +92,7 @@ class TeacherEnv(gym.Env):
         next(our_loop)
         next(base_loop)
         coefficient = 1
+
         for _ in itertools.count():
 
             def interact(loop, c):
@@ -89,7 +103,10 @@ class TeacherEnv(gym.Env):
             _, baseline_rewards = zip(*interact(base_loop, 1))
             s = np.array(list(zip(actions, rewards)))
             r = np.mean(rewards)
-            i = dict(regret=optimal - r, baseline=np.mean(baseline_rewards))
+            i = dict(
+                regret=optimal - r, baseline_regret=optimal - np.mean(baseline_rewards)
+            )
+            self.report(**i)
             coefficient = yield s, r, False, i
 
     def render(self, mode="human"):
