@@ -43,7 +43,7 @@ class TeacherEnv(gym.Env):
             high=np.tile(np.array([choices - 1, max_reward]), reps),
         )
         self.action_space = gym.spaces.Box(
-            low=np.zeros(1), high=np.ones(1) * max_action
+            low=np.zeros(batches), high=np.ones(batches) * max_action
         )
         self.ucb = UCB(self._seed)
         self.dataset = np.zeros((self.data_size, self.batches, self.choices))
@@ -80,7 +80,7 @@ class TeacherEnv(gym.Env):
 
         next(our_loop)
         next(base_loop)
-        coefficient = 1
+        coefficient = np.ones(self.batches)
 
         for _ in itertools.count():
 
@@ -89,7 +89,8 @@ class TeacherEnv(gym.Env):
                     yield loop.send(c)
 
             actions, rewards = [
-                np.stack(x) for x in zip(*interact(our_loop, float(coefficient)))
+                np.stack(x)
+                for x in zip(*interact(our_loop, np.expand_dims(coefficient, -1)))
             ]
             baseline_actions, _ = [np.stack(x) for x in zip(*interact(base_loop, 1))]
             chosen_means = means[
