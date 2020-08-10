@@ -172,7 +172,7 @@ class Trainer:
                     episode=episode_num + 1,
                     episode_timestep=episode_timesteps,
                     reward=episode_reward,
-                    **counter,
+                    **{"episode_" + k: v for k, v in counter.items()},
                 )
 
                 episode_reward = 0

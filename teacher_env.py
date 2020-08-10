@@ -92,7 +92,9 @@ class TeacherEnv(gym.Env):
                 np.stack(x)
                 for x in zip(*interact(our_loop, np.expand_dims(coefficient, -1)))
             ]
-            baseline_actions, _ = [np.stack(x) for x in zip(*interact(base_loop, 1))]
+            baseline_actions, baseline_rewards = [
+                np.stack(x) for x in zip(*interact(base_loop, 1))
+            ]
             chosen_means = means[
                 np.tile(np.arange(self.batches), self.context_length),
                 actions.astype(int).flatten(),
@@ -106,6 +108,7 @@ class TeacherEnv(gym.Env):
             i = dict(
                 regret=np.mean(optimal - chosen_means),
                 baseline_regret=np.mean(optimal - baseline_chosen_means),
+                baseline_rewards=np.mean(baseline_rewards),
                 coefficient=np.mean(actions),
             )
             self.report(**i)
