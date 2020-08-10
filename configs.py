@@ -55,68 +55,10 @@ search = dict(
     policy_freq=hp.choice("policy_freq", [1, 2]),
     seed=hp.randint("seed", 20),
     start_timesteps=hp.choice("start_timesteps", big_values(0, 1)),
+    batches=hp.choice("batches", []),
     eval_freq=5000,
     max_timesteps=None,
     replay_size=200000,
     discount=0.99,
 )
-outer_search = dict(
-    outer_batch_size=hp.choice("outer_batch_size", medium_values(7, 9)),
-    outer_expl_noise=hp.choice("outer_expl_noise", small_values(1, 3)),
-    outer_noise_clip=hp.choice("outer_noise_clip", small_values(1, 3)),
-    outer_lr=hp.choice("outer_lr", small_values(1, 3)),
-    outer_policy_freq=hp.choice("outer_policy_freq", [1, 2]),
-    outer_seed=hp.randint("outer_seed", 20),
-    outer_start_timesteps=1,
-)
-l2b_search = dict(
-    context_length=hp.choice("context_length", [40, 50, 60]),
-    sample_done_prob=hp.choice("sample_done_prob", [0.1, 0.3, 0.5]),
-    update_freq=hp.choice("update_freq", [40, 50, 75, 100]),
-    inner_env_id=None,
-    **dict(copy_args(search, "inner_")),
-    **outer_search,
-)
-l2b_search.update(
-    inner_max_timesteps=hp.choice("inner_max_timesteps", [200, 500, 1000, 1500]),
-    outer_max_timesteps=50000,
-)
-l2b_pendulum = dict(
-    context_length=hp.choice("context_length", [10, 20, 50, 50]),
-    sample_done_prob=hp.choice("sample_done_prob", [0.1, 0.3, 0.5]),
-    update_freq=hp.choice("update_freq", [1, 5, 10, 50]),
-    **dict(copy_args(pendulum, "inner_")),
-    **outer_search,
-)
-l2b_pendulum.update(
-    inner_start_timesteps=1, inner_max_timesteps=5000, outer_max_timesteps=15000
-)
-debug_l2b = dict(
-    context_length=2,
-    sample_done_prob=0,
-    update_freq=10000,  # TODO
-    **dict(copy_args(pendulum, "inner_")),
-    **dict(copy_args(pendulum, "outer_")),
-)
-l2b_debug_env = get_config("l2b-debug-env")
-l2b_debug_search = dict(**l2b_debug_env)
-l2b_debug_search.update(
-    inner_max_timesteps=1000,
-    outer_max_timesteps=25000,
-    outer_seed=hp.randint("outer_seed", 20),
-    inner_seed=hp.randint("inner_seed", 20),
-    outer_lr=hp.choice("outer_lr", small_values(3, 5)),
-    outer_policy_freq=hp.choice("outer_policy_freq", [1, 2, 3]),
-)
-no_neg = get_config("no-neg-reward")
-no_neg.update(seed=hp.randint("seed", 20))
-configs = dict(
-    search=search,
-    pendulum=pendulum,
-    l2b_search=l2b_search,
-    debug_l2b=debug_l2b,
-    l2b_debug_search=l2b_debug_search,
-    l2b_debug_env=l2b_debug_env,
-    l2b_pendulum=l2b_pendulum,
-    no_neg=no_neg,
-)
+configs = dict(search=search, pendulum=pendulum,)
