@@ -105,6 +105,7 @@ class TeacherEnv(gym.Env):
             i = dict(
                 regret=np.mean(optimal - chosen_means),
                 baseline_regret=np.mean(optimal - baseline_chosen_means),
+                coefficient=np.mean(actions),
             )
             self.report(**i)
             coefficient = yield s, r, False, i
