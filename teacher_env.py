@@ -17,7 +17,8 @@ class TeacherEnv(gym.Env):
         context_length: int,
         std: float,
         choices: int,
-        inner_steps: int,
+        batches: int,
+        inner_timesteps: int,
         use_tune: bool,
         report_freq: int,
         min_reward=-100,
@@ -25,29 +26,27 @@ class TeacherEnv(gym.Env):
         max_action=2,
     ):
         super().__init__()
+        self.choices = choices
+        self.batches = batches
         self.report_freq = report_freq
         self.use_tune = use_tune
-        self.data_size = (inner_steps + 2) * context_length
+        self.data_size = inner_timesteps
         self.std_scale = std
         self.random, self._seed = seeding.np_random(0)
         self.context_length = context_length
-        self.choices = choices
         self.iterator = None
+        reps = (self.context_length, self.batches, 1)
+        self.min_reward = min_reward
+        self.max_reward = max_reward
         self.observation_space = gym.spaces.Box(
-            low=np.array([[0, min_reward]] * self.context_length),
-            high=np.array([[choices - 1, max_reward]] * self.context_length),
+            low=np.tile(np.array([0, min_reward]), reps),
+            high=np.tile(np.array([choices - 1, max_reward]), reps),
         )
         self.action_space = gym.spaces.Box(
             low=np.zeros(1), high=np.ones(1) * max_action
         )
         self.ucb = UCB(self._seed)
-
-        self.our_selections = np.zeros((self.data_size, self.choices))
-        self.our_rewards = np.zeros((self.data_size, self.choices))
-        self.their_selections = np.zeros((self.data_size, self.choices))
-        self.their_rewards = np.zeros((self.data_size, self.choices))
-
-        self.dataset = np.zeros((self.data_size, self.choices))
+        self.dataset = np.zeros((self.data_size, self.batches, self.choices))
 
     def report(self, **kwargs):
         if self.use_tune:
@@ -68,27 +67,17 @@ class TeacherEnv(gym.Env):
     def step(self, action):
         return self.iterator.send(action)
 
-    def zero_arrays(self):
-        self.our_selections[:] = 0
-        self.our_rewards[:] = 0
-        self.their_selections[:] = 0
-        self.their_rewards[:] = 0
-
     def _generator(self) -> Generator:
-        means = self.random.random(self.choices)
-        stds = self.random.random(self.choices) * self.std_scale
-        optimal = means.max()
-        means = np.tile(means, (self.data_size, 1))
-        stds = np.tile(stds, (self.data_size, 1))
+        size = (self.batches, self.choices)
+        means = np.random.normal(size=size, scale=1)
+        stds = np.random.poisson(size=size)
+        loc = np.tile(means, (self.data_size, 1, 1))
+        scale = np.tile(stds, (self.data_size, 1, 1))
+        self.dataset[:] = self.random.normal(loc, scale)
+        our_loop = self.ucb.train_loop(dataset=self.dataset)
+        base_loop = self.ucb.train_loop(dataset=self.dataset)
+        optimal = means.max(axis=1, initial=-np.inf)
 
-        self.zero_arrays()
-        self.dataset[:] = self.random.normal(means, stds)
-        our_loop = self.ucb.train_loop(
-            self.dataset, rewards=self.our_rewards, selections=self.our_selections
-        )
-        base_loop = self.ucb.train_loop(
-            self.dataset, rewards=self.their_rewards, selections=self.their_selections
-        )
         next(our_loop)
         next(base_loop)
         coefficient = 1
@@ -99,12 +88,23 @@ class TeacherEnv(gym.Env):
                 for _ in range(self.context_length):
                     yield loop.send(c)
 
-            actions, rewards = zip(*interact(our_loop, float(coefficient)))
-            _, baseline_rewards = zip(*interact(base_loop, 1))
-            s = np.array(list(zip(actions, rewards)))
+            actions, rewards = [
+                np.stack(x) for x in zip(*interact(our_loop, float(coefficient)))
+            ]
+            baseline_actions, _ = [np.stack(x) for x in zip(*interact(base_loop, 1))]
+            chosen_means = means[
+                np.tile(np.arange(self.batches), self.context_length),
+                actions.astype(int).flatten(),
+            ].reshape(self.context_length, self.batches)
+            baseline_chosen_means = means[
+                np.tile(np.arange(self.batches), self.context_length),
+                baseline_actions.astype(int).flatten(),
+            ].reshape(self.context_length, self.batches)
+            s = np.stack([actions, rewards], axis=-1)
             r = np.mean(rewards)
             i = dict(
-                regret=optimal - r, baseline_regret=optimal - np.mean(baseline_rewards)
+                regret=np.mean(optimal - chosen_means),
+                baseline_regret=np.mean(optimal - baseline_chosen_means),
             )
             self.report(**i)
             coefficient = yield s, r, False, i

@@ -12,38 +12,36 @@ from trainer import Trainer
 class TeacherTrainer(Trainer):
     def __init__(self, make_env, *args, **kwargs):
         self._make_env = make_env
-        super().__init__(*args, env_id=None, **kwargs)
+        kwargs.update(env_id=None)
+        super().__init__(*args, **kwargs)
 
     @classmethod
     def run(
         cls,
-        context_length: int,
-        std: float,
+        batches: int,
         choices: int,
-        inner_steps: int,
-        use_tune,
+        context_length: int,
+        inner_timesteps: int,
         report_freq: int,
+        std: float,
+        use_tune,
         **kwargs
     ):
         def make_env():
             return TimeLimit(
                 TeacherEnv(
+                    batches=batches,
                     context_length=context_length,
                     std=std,
                     choices=choices,
-                    inner_steps=inner_steps,
+                    inner_timesteps=inner_timesteps,
                     use_tune=use_tune,
                     report_freq=report_freq,
                 ),
-                max_episode_steps=inner_steps,
+                max_episode_steps=inner_timesteps // context_length - 1,
             )
 
-        cls(
-            **kwargs,
-            use_tune=use_tune,
-            context_length=context_length,
-            make_env=make_env,
-        ).train()
+        cls(**kwargs, use_tune=use_tune, make_env=make_env,).train()
 
     def make_env(self):
         return self._make_env()
@@ -61,8 +59,9 @@ if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
     PARSER.add_argument("--context-length", type=int, default=10)
     PARSER.add_argument("--std", type=float, default=1.0)
-    PARSER.add_argument("--choices", type=int, default=10)
-    PARSER.add_argument("--inner-steps", type=int, default=int(1e3))
+    PARSER.add_argument("--choices", "-d", type=int, default=50)
+    PARSER.add_argument("--batches", "-b", type=int, default=100)
+    PARSER.add_argument("--inner-timesteps", "-T", type=int, default=int(1e3))
     PARSER.add_argument("--report-freq", type=int, default=10)
     add_arguments(PARSER)
     TeacherTrainer.main(**vars(PARSER.parse_args()))
