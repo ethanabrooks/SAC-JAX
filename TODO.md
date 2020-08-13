@@ -1,0 +1,7 @@
+- fix `c` in [0, 4]
+- try feeding value and exploration 
+- non-stationary reward
+- learn a parameter specific to a given arm?
+- reward outer loop with next 10 steps
+- c is root not coefficient
+- plot baseline returns
