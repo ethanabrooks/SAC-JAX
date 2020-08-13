@@ -90,10 +90,10 @@ class TeacherEnv(gym.Env):
 
             actions, rewards = [
                 np.stack(x)
-                for x in zip(*interact(our_loop, np.expand_dims(coefficient, -1)))
+                for x in zip(*interact(our_loop, c=np.expand_dims(coefficient, -1)))
             ]
             baseline_actions, baseline_rewards = [
-                np.stack(x) for x in zip(*interact(base_loop, 1))
+                np.stack(x) for x in zip(*interact(base_loop, c=1))
             ]
             chosen_means = means[
                 np.tile(np.arange(self.batches), self.context_length),

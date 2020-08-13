@@ -37,7 +37,8 @@ class UCB:
             r = rewards / choices
             if c is None:
                 c = 1
-            delta = np.sqrt(3 / 2 * np.log(i + 1) / choices)
+            # delta = np.sqrt(3 / 2 * np.log(i + 1) / choices)
+            delta = (np.log(i + 1) / choices) ** (1 / c)
             upper_bound = r + c * delta
             choice = np.argmax(upper_bound, axis=-1)
             choices[arange, choice] += 1
