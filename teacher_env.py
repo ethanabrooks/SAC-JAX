@@ -116,17 +116,17 @@ class TeacherEnv(gym.Env):
                 np.tile(np.arange(self.batches), self.context_length),
                 baseline_actions.astype(int).flatten(),
             ].reshape(self.context_length, self.batches)
-            baseline_return += baseline_rewards
+            baseline_return += np.mean(baseline_rewards)
 
             s = np.stack([actions, rewards], axis=-1)
             r = np.mean(rewards)
             if t % self.report_freq == 0:
                 self.report(
-                    baseline_regret=(optimal[t : t + 1] - baseline_chosen_means),
-                    baseline_rewards=baseline_rewards,
-                    regret=(optimal[t : t + 1] - chosen_means),
-                    rewards=rewards,
-                    coefficient=coefficient,
+                    baseline_regret=np.mean(optimal[t : t + 1] - baseline_chosen_means),
+                    baseline_rewards=np.mean(baseline_rewards),
+                    regret=np.mean(optimal[t : t + 1] - chosen_means),
+                    rewards=np.mean(rewards),
+                    coefficient=np.mean(coefficient).item(),
                 )
             try:
                 interaction = list(
