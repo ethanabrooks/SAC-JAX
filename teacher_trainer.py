@@ -38,7 +38,7 @@ class TeacherTrainer(Trainer):
                     use_tune=use_tune,
                     report_freq=report_freq,
                 ),
-                max_episode_steps=inner_timesteps // context_length - 1,
+                max_episode_steps=inner_timesteps,
             )
 
         cls(**kwargs, use_tune=use_tune, make_env=make_env,).train()
