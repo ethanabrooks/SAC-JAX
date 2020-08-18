@@ -50,6 +50,7 @@ class TeacherEnv(gym.Env):
         self.dataset = np.zeros((data_size, self.batches, self.choices))
 
     def report(self, **kwargs):
+        kwargs = {k: np.mean(v) for k, v in kwargs.items()}
         if self.use_tune:
             tune.report(**kwargs)
         else:
@@ -121,14 +122,12 @@ class TeacherEnv(gym.Env):
             r = np.mean(rewards)
             if t % self.report_freq == 0:
                 self.report(
-                    baseline_regret=np.mean(optimal[t : t + 1] - baseline_chosen_means),
-                    baseline_rewards=np.mean(baseline_rewards),
-                    regret=np.mean(optimal[t : t + 1] - chosen_means),
-                    rewards=np.mean(rewards),
-                    coefficient=np.mean(coefficient),
+                    baseline_regret=(optimal[t : t + 1] - baseline_chosen_means),
+                    baseline_rewards=baseline_rewards,
+                    regret=(optimal[t : t + 1] - chosen_means),
+                    rewards=rewards,
+                    coefficient=coefficient,
                 )
-            if t == self.data_size:
-                self.report(baseline_return=baseline_return)
             try:
                 interaction = list(
                     interact(our_loop, c=np.expand_dims(coefficient, -1))
@@ -136,6 +135,9 @@ class TeacherEnv(gym.Env):
                 self._max_episode_steps = t
             except RuntimeError:  # StopIteration
                 done = True
+
+            if done:
+                self.report(baseline_return=baseline_return)
 
             coefficient = yield s, r, done, {}
 
