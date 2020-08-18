@@ -27,16 +27,13 @@ class TeacherTrainer(Trainer):
         **kwargs
     ):
         def make_env():
-            return TimeLimit(
-                TeacherEnv(
-                    batches=batches,
-                    context_length=context_length,
-                    choices=choices,
-                    data_size=data_size,
-                    use_tune=use_tune,
-                    report_freq=report_freq,
-                ),
-                max_episode_steps=(data_size - batches) // context_length - 1,
+            return TeacherEnv(
+                batches=batches,
+                context_length=context_length,
+                choices=choices,
+                data_size=data_size,
+                use_tune=use_tune,
+                report_freq=report_freq,
             )
 
         cls(**kwargs, use_tune=use_tune, make_env=make_env,).train()

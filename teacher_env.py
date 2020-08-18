@@ -33,6 +33,7 @@ class TeacherEnv(gym.Env):
         self.lam = lam
         self.random, self._seed = seeding.np_random(0)
         self.context_length = context_length
+        self._max_episode_steps = np.inf
         self.iterator = None
         reps = (self.context_length, self.batches, 1)
         self.min_reward = min_reward
@@ -43,7 +44,7 @@ class TeacherEnv(gym.Env):
             high=np.tile(np.array([choices - 1, max_reward]), reps),
         )
         self.action_space = gym.spaces.Box(
-            low=np.zeros(batches), high=np.ones(batches) * max_action
+            low=np.ones(batches), high=np.ones(batches) * max_action
         )
         self.ucb = UCB(self._seed)
         self.dataset = np.zeros((data_size, self.batches, self.choices))
@@ -92,16 +93,15 @@ class TeacherEnv(gym.Env):
         coefficient = 2 * np.ones(self.batches)
         ones = np.ones(self.batches * self.context_length, dtype=int)
 
+        def interact(loop, c):
+            for _ in range(self.context_length):
+                yield loop.send(c)
+
+        done = False
+        interaction = interact(our_loop, c=np.expand_dims(coefficient, -1))
+
         for t in itertools.count():
-
-            def interact(loop, c):
-                for _ in range(self.context_length):
-                    yield loop.send(c)
-
-            actions, rewards = [
-                np.stack(x)
-                for x in zip(*interact(our_loop, c=np.expand_dims(coefficient, -1)))
-            ]
+            actions, rewards = [np.stack(x) for x in zip(*interaction)]
             baseline_actions, baseline_rewards = [
                 np.stack(x) for x in zip(*interact(base_loop, c=1))
             ]
@@ -121,16 +121,23 @@ class TeacherEnv(gym.Env):
             r = np.mean(rewards)
             if t % self.report_freq == 0:
                 self.report(
-                    baseline_regret=np.mean(optimal[t: t+1] - baseline_chosen_means),
+                    baseline_regret=np.mean(optimal[t : t + 1] - baseline_chosen_means),
                     baseline_rewards=np.mean(baseline_rewards),
-                    regret=np.mean(optimal[t: t+1] - chosen_means),
+                    regret=np.mean(optimal[t : t + 1] - chosen_means),
                     rewards=np.mean(rewards),
                     coefficient=np.mean(coefficient),
                 )
             if t == self.data_size:
                 self.report(baseline_return=baseline_return)
-            coefficient = yield s, r, False, {}
+            try:
+                interaction = list(
+                    interact(our_loop, c=np.expand_dims(coefficient, -1))
+                )
+                self._max_episode_steps = t
+            except RuntimeError:  # StopIteration
+                done = True
 
+            coefficient = yield s, r, done, {}
 
     def render(self, mode="human"):
         pass
