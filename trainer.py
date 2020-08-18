@@ -130,12 +130,11 @@ class Trainer:
         env = env or self.env
         obs, done = env.reset(), False
 
-        episode_reward = 0
+        episode_return = 0
         episode_timesteps = 0
         episode_num = 0
 
         action = yield obs
-        counter = Counter()
 
         for t in itertools.count():
             episode_timesteps += 1
@@ -144,8 +143,8 @@ class Trainer:
             next_obs, reward, done, info = env.step(action)
 
             self.report(**info)
-            
-            episode_reward += reward
+
+            episode_return += reward
 
             # This 'trick' converts the finite-horizon task into an infinite-horizon one. It does change the problem
             # we are solving, however it has been observed empirically to work pretty well. noinspection
@@ -173,13 +172,12 @@ class Trainer:
                     timestep=t + 1,
                     episode=episode_num + 1,
                     episode_timestep=episode_timesteps,
-                    reward=episode_reward,
+                    episode_return=episode_return,
                 )
 
-                episode_reward = 0
+                episode_return = 0
                 episode_timesteps = 0
                 episode_num += 1
-                counter = Counter()
 
     def train(self):
         rng = self.rng

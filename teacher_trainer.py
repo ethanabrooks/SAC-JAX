@@ -21,7 +21,7 @@ class TeacherTrainer(Trainer):
         batches: int,
         choices: int,
         context_length: int,
-        inner_timesteps: int,
+        data_size: int,
         report_freq: int,
         std: float,
         use_tune,
@@ -34,11 +34,11 @@ class TeacherTrainer(Trainer):
                     context_length=context_length,
                     std=std,
                     choices=choices,
-                    inner_timesteps=inner_timesteps,
+                    data_size=data_size,
                     use_tune=use_tune,
                     report_freq=report_freq,
                 ),
-                max_episode_steps=inner_timesteps,
+                max_episode_steps=(data_size - batches) // context_length,
             )
 
         cls(**kwargs, use_tune=use_tune, make_env=make_env,).train()
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     PARSER.add_argument("--std", type=float, default=1.0)
     PARSER.add_argument("--choices", "-d", type=int, default=50)
     PARSER.add_argument("--batches", "-b", type=int, default=100)
-    PARSER.add_argument("--inner-timesteps", "-T", type=int, default=int(1e3))
+    PARSER.add_argument("--data-size", "-T", type=int, default=int(1e3))
     PARSER.add_argument("--report-freq", type=int, default=10)
     add_arguments(PARSER)
     TeacherTrainer.main(**vars(PARSER.parse_args()))

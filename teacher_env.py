@@ -18,7 +18,7 @@ class TeacherEnv(gym.Env):
         std: float,
         choices: int,
         batches: int,
-        inner_timesteps: int,
+        data_size: int,
         use_tune: bool,
         report_freq: int,
         min_reward=-100,
@@ -37,7 +37,7 @@ class TeacherEnv(gym.Env):
         reps = (self.context_length, self.batches, 1)
         self.min_reward = min_reward
         self.max_reward = max_reward
-        self.max_steps = inner_timesteps
+        self.data_size = data_size
         self.observation_space = gym.spaces.Box(
             low=np.tile(np.array([0, min_reward]), reps),
             high=np.tile(np.array([choices - 1, max_reward]), reps),
@@ -46,7 +46,6 @@ class TeacherEnv(gym.Env):
             low=np.zeros(batches), high=np.ones(batches) * max_action
         )
         self.ucb = UCB(self._seed)
-        data_size = inner_timesteps * context_length + self.choices
         self.dataset = np.zeros((data_size, self.batches, self.choices))
 
     def report(self, **kwargs):
@@ -120,13 +119,15 @@ class TeacherEnv(gym.Env):
 
             s = np.stack([actions, rewards], axis=-1)
             r = np.mean(rewards)
+            print(t, optimal[t, 0])
             i = dict(
-                regret=np.mean(optimal[t: t+1] - chosen_means),
                 baseline_regret=np.mean(optimal[t: t+1] - baseline_chosen_means),
                 baseline_rewards=np.mean(baseline_rewards),
-                coefficient=np.mean(actions),
+                regret=np.mean(optimal[t: t+1] - chosen_means),
+                rewards=np.mean(rewards),
+                coefficient=np.mean(coefficient),
             )
-            if t == self.max_steps:
+            if t == self.data_size:
                 i.update(baseline_return=baseline_return)
             self.report(**i)
             coefficient = yield s, r, False, i
