@@ -119,18 +119,17 @@ class TeacherEnv(gym.Env):
 
             s = np.stack([actions, rewards], axis=-1)
             r = np.mean(rewards)
-            print(t, optimal[t, 0])
-            i = dict(
-                baseline_regret=np.mean(optimal[t: t+1] - baseline_chosen_means),
-                baseline_rewards=np.mean(baseline_rewards),
-                regret=np.mean(optimal[t: t+1] - chosen_means),
-                rewards=np.mean(rewards),
-                coefficient=np.mean(coefficient),
-            )
+            if t % self.report_freq == 0:
+                self.report(
+                    baseline_regret=np.mean(optimal[t: t+1] - baseline_chosen_means),
+                    baseline_rewards=np.mean(baseline_rewards),
+                    regret=np.mean(optimal[t: t+1] - chosen_means),
+                    rewards=np.mean(rewards),
+                    coefficient=np.mean(coefficient),
+                )
             if t == self.data_size:
-                i.update(baseline_return=baseline_return)
-            self.report(**i)
-            coefficient = yield s, r, False, i
+                self.report(baseline_return=baseline_return)
+            coefficient = yield s, r, False, {}
 
 
     def render(self, mode="human"):

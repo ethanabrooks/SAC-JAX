@@ -36,7 +36,6 @@ class TeacherTrainer(Trainer):
                     choices=choices,
                     data_size=data_size,
                     use_tune=use_tune,
-                    report_freq=report_freq,
                 ),
                 max_episode_steps=(data_size - batches) // context_length,
             )
@@ -57,11 +56,11 @@ class TeacherTrainer(Trainer):
 
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
-    PARSER.add_argument("--context-length", type=int, default=10)
-    PARSER.add_argument("--std", type=float, default=1.0)
-    PARSER.add_argument("--choices", "-d", type=int, default=50)
-    PARSER.add_argument("--batches", "-b", type=int, default=100)
-    PARSER.add_argument("--data-size", "-T", type=int, default=int(1e3))
-    PARSER.add_argument("--report-freq", type=int, default=10)
+    PARSER.add_argument("--context-length", type=int, default=None)
+    PARSER.add_argument("--std", type=float, default=None)
+    PARSER.add_argument("--choices", "-d", type=int, default=None)
+    PARSER.add_argument("--batches", "-b", type=int, default=None)
+    PARSER.add_argument("--data-size", "-T", type=int, default=None)
+    PARSER.add_argument("--report-freq", type=int, default=None)
     add_arguments(PARSER)
     TeacherTrainer.main(**vars(PARSER.parse_args()))

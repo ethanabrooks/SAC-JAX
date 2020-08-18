@@ -142,8 +142,6 @@ class Trainer:
             # Perform action
             next_obs, reward, done, info = env.step(action)
 
-            self.report(**info)
-
             episode_return += reward
 
             # This 'trick' converts the finite-horizon task into an infinite-horizon one. It does change the problem
