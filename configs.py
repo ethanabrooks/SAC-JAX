@@ -60,5 +60,8 @@ search = dict(
     max_timesteps=None,
     replay_size=200000,
     discount=0.99,
+    choices=50,
+    context_length=hp.choice("context_length", [10, 20, 30, 40]),
+    report_freq=50,
 )
 configs = dict(search=search, pendulum=pendulum,)

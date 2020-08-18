@@ -15,12 +15,12 @@ class TeacherEnv(gym.Env):
     def __init__(
         self,
         context_length: int,
-        std: float,
         choices: int,
         batches: int,
         data_size: int,
         use_tune: bool,
         report_freq: int,
+        lam=1,
         min_reward=-100,
         max_reward=100,
         max_action=4,
@@ -30,7 +30,7 @@ class TeacherEnv(gym.Env):
         self.batches = batches
         self.report_freq = report_freq
         self.use_tune = use_tune
-        self.std_scale = std
+        self.lam = lam
         self.random, self._seed = seeding.np_random(0)
         self.context_length = context_length
         self.iterator = None
@@ -72,7 +72,7 @@ class TeacherEnv(gym.Env):
 
         def sample_dataset(h):
             means = np.random.normal(size=size, scale=1)
-            stds = np.random.poisson(size=size)
+            stds = np.random.poisson(size=size, lam=self.lam)
             return np.tile(means, (h, 1, 1)), np.tile(stds, (h, 1, 1))
 
         half = int(len(self.dataset) // 2)

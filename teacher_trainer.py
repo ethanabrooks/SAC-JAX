@@ -23,7 +23,6 @@ class TeacherTrainer(Trainer):
         context_length: int,
         data_size: int,
         report_freq: int,
-        std: float,
         use_tune,
         **kwargs
     ):
@@ -32,10 +31,10 @@ class TeacherTrainer(Trainer):
                 TeacherEnv(
                     batches=batches,
                     context_length=context_length,
-                    std=std,
                     choices=choices,
                     data_size=data_size,
                     use_tune=use_tune,
+                    report_freq=report_freq,
                 ),
                 max_episode_steps=(data_size - batches) // context_length,
             )
@@ -57,7 +56,7 @@ class TeacherTrainer(Trainer):
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
     PARSER.add_argument("--context-length", type=int, default=None)
-    PARSER.add_argument("--std", type=float, default=None)
+    PARSER.add_argument("--lam", type=float, default=None)
     PARSER.add_argument("--choices", "-d", type=int, default=None)
     PARSER.add_argument("--batches", "-b", type=int, default=None)
     PARSER.add_argument("--data-size", "-T", type=int, default=None)
