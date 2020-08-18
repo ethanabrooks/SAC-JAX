@@ -56,7 +56,6 @@ search = dict(
     seed=hp.randint("seed", 20),
     start_timesteps=hp.choice("start_timesteps", big_values(0, 1)),
     batches=hp.choice("batches", []),
-    eval_freq=5000,
     max_timesteps=None,
     replay_size=200000,
     discount=0.99,
