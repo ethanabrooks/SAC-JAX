@@ -142,7 +142,9 @@ class Trainer:
 
             # Perform action
             next_obs, reward, done, info = env.step(action)
-            counter.update(**info)
+
+            self.report(**info)
+            
             episode_reward += reward
 
             # This 'trick' converts the finite-horizon task into an infinite-horizon one. It does change the problem
@@ -172,7 +174,6 @@ class Trainer:
                     episode=episode_num + 1,
                     episode_timestep=episode_timesteps,
                     reward=episode_reward,
-                    **{"episode_" + k: v for k, v in counter.items()},
                 )
 
                 episode_reward = 0
