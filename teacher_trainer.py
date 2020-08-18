@@ -36,7 +36,7 @@ class TeacherTrainer(Trainer):
                     use_tune=use_tune,
                     report_freq=report_freq,
                 ),
-                max_episode_steps=(data_size - batches) // context_length,
+                max_episode_steps=(data_size - batches) // context_length - 1,
             )
 
         cls(**kwargs, use_tune=use_tune, make_env=make_env,).train()
