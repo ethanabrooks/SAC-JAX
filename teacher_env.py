@@ -44,7 +44,9 @@ class TeacherEnv(gym.Env):
             high=np.tile(np.array([choices - 1, max_reward]), reps),
         )
         self.action_space = gym.spaces.Box(
-            low=np.ones(batches), high=np.ones(batches) * max_action
+            # low=np.ones(batches), high=np.ones(batches) * max_action
+            low=np.zeros(batches),
+            high=np.ones(batches) * (choices - 0.1),
         )
         self.ucb = UCB(self._seed)
         self.dataset = np.zeros((data_size, self.batches, self.choices))
@@ -77,11 +79,12 @@ class TeacherEnv(gym.Env):
             stds = np.random.poisson(size=size, lam=self.lam)
             return np.tile(means, (h, 1, 1)), np.tile(stds, (h, 1, 1))
 
-        half = int(len(self.dataset) // 2)
-        loc1, scale1 = sample_dataset(half)
-        loc2, scale2 = sample_dataset(len(self.dataset) - half)
-        loc = np.vstack([loc1, loc2])
-        scale = np.vstack([scale1, scale2])
+        # half = int(len(self.dataset) // 2)
+        # loc1, scale1 = sample_dataset(half)
+        # loc2, scale2 = sample_dataset(len(self.dataset) - half)
+        # loc = np.vstack([loc1, loc2])
+        # scale = np.vstack([scale1, scale2])
+        loc, scale = sample_dataset(len(self.dataset))
         self.dataset = self.random.normal(loc, scale)
         our_loop = self.ucb.train_loop(dataset=self.dataset)
         base_loop = self.ucb.train_loop(dataset=self.dataset)
@@ -93,6 +96,7 @@ class TeacherEnv(gym.Env):
         next(base_loop)
         coefficient = 2 * np.ones(self.batches)
         ones = np.ones(self.batches * self.context_length, dtype=int)
+        arange = np.arange(self.batches)
 
         def interact(loop, c):
             for _ in range(self.context_length):
@@ -106,20 +110,19 @@ class TeacherEnv(gym.Env):
             baseline_actions, baseline_rewards = [
                 np.stack(x) for x in zip(*interact(base_loop, c=1))
             ]
-            chosen_means = loc[
-                ones * t,
-                np.tile(np.arange(self.batches), self.context_length),
-                actions.astype(int).flatten(),
+            chosen_means = loc[t][
+                np.tile(arange, self.context_length),
+                actions.astype(np.int32).flatten(),
             ].reshape(self.context_length, self.batches)
-            baseline_chosen_means = loc[
-                ones * t,
-                np.tile(np.arange(self.batches), self.context_length),
+            baseline_chosen_means = loc[t][
+                np.tile(arange, self.context_length),
                 baseline_actions.astype(int).flatten(),
             ].reshape(self.context_length, self.batches)
             baseline_return += np.mean(baseline_rewards)
 
             s = np.stack([actions, rewards], axis=-1)
-            r = np.mean(rewards)
+            # r = np.mean(rewards)
+            r = np.mean(self.dataset[t][arange, coefficient.astype(np.int32)])
             if t % self.report_freq == 0:
                 self.report(
                     baseline_regret=np.mean(optimal[t : t + 1] - baseline_chosen_means),

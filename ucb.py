@@ -35,8 +35,8 @@ class UCB:
         # implementation in vectorized form
         for i, data, in enumerate(dataset[d:], start=d):
             r = rewards / choices
-            if c is None:
-                c = 2
+            # if c is None:
+            c = 2
             # delta = np.sqrt(3 / 2 * np.log(i + 1) / choices)
             delta = (np.log(i + 1) / choices) ** (1 / c)
             upper_bound = r + c * delta
