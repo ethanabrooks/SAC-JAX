@@ -41,7 +41,7 @@ class Actor(networks.Actor):
     def __call__(
         self, obs: jnp.DeviceArray, action_dim, *args, **kwargs
     ) -> Tuple[jnp.DeviceArray, jnp.DeviceArray]:
-        # obs = ContextEncoder()(obs)
+        obs = ContextEncoder()(obs)
         return super().__call__(obs, action_dim, *args, **kwargs)
 
 
@@ -49,7 +49,7 @@ class Critic(networks.Critic):
     def __call__(
         self, obs: jnp.DeviceArray, action_dim
     ) -> Tuple[jnp.DeviceArray, jnp.DeviceArray]:
-        # obs = ContextEncoder()(obs)
+        obs = ContextEncoder()(obs)
         return super().__call__(obs, action_dim)
 
 

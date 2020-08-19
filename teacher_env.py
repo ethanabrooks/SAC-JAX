@@ -60,9 +60,6 @@ class TeacherEnv(gym.Env):
         loc, scale = sample_dataset(len(self.dataset))
         self.dataset = self.random.normal(loc, scale)
         self.loc = loc
-        self.pendulum = gym.make("Pendulum-v0")
-        self.observation_space = self.pendulum.observation_space
-        self.action_space = self.pendulum.action_space
 
     def report(self, **kwargs):
         kwargs = {k: np.mean(v) for k, v in kwargs.items()}
@@ -108,6 +105,7 @@ class TeacherEnv(gym.Env):
         next(our_loop)
         next(base_loop)
         coefficient = 2 * np.ones(self.batches)
+        ones = np.ones(self.batches * self.context_length, dtype=int)
         arange = np.arange(self.batches)
 
         def interact(loop, c):
@@ -115,14 +113,12 @@ class TeacherEnv(gym.Env):
                 yield loop.send(c)
 
         done = False
-        interaction = list(interact(our_loop, c=np.expand_dims(coefficient, -1)))
-        interaction2 = list(interact(base_loop, c=1))
-        action = yield self.pendulum.reset(), None, None, None
+        interaction = interact(our_loop, c=np.expand_dims(coefficient, -1))
 
         for t in itertools.count():
             actions, rewards = [np.stack(x) for x in zip(*interaction)]
             baseline_actions, baseline_rewards = [
-                np.stack(x) for x in zip(*interaction2)
+                np.stack(x) for x in zip(*interact(base_loop, c=1))
             ]
             chosen_means = self.loc[t][
                 np.tile(arange, self.context_length),
@@ -135,8 +131,8 @@ class TeacherEnv(gym.Env):
             baseline_return += np.mean(baseline_rewards)
 
             s = np.stack([actions, rewards], axis=-1)
-            # r = np.mean(rewards)
-            r = np.mean(self.dataset[t][arange, coefficient.astype(np.int32)])
+            r = np.mean(rewards)
+            # r = np.mean(self.dataset[t][arange, coefficient.astype(np.int32)])
             if t % self.report_freq == 0:
                 self.report(
                     baseline_regret=np.mean(optimal[t : t + 1] - baseline_chosen_means),
@@ -145,19 +141,18 @@ class TeacherEnv(gym.Env):
                     rewards=np.mean(rewards),
                     coefficient=np.mean(coefficient).item(),
                 )
-            # try:
-            #     interaction = list(
-            #         interact(our_loop, c=np.expand_dims(coefficient, -1))
-            #     )
-            #     self._max_episode_steps = t
-            # except RuntimeError:  # StopIteration
-            #     done = True
+            try:
+                interaction = list(
+                    interact(our_loop, c=np.expand_dims(coefficient, -1))
+                )
+                self._max_episode_steps = t
+            except RuntimeError:  # StopIteration
+                done = True
 
             if done:
                 self.report(baseline_return=baseline_return)
 
-            # coefficient = yield np.ones_like(s), r, done, {}
-            action = yield self.pendulum.step(action)
+            coefficient = yield np.ones_like(s), r, done, {}
 
     def render(self, mode="human"):
         pass
