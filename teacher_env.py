@@ -50,6 +50,16 @@ class TeacherEnv(gym.Env):
         )
         self.ucb = UCB(self._seed)
         self.dataset = np.zeros((data_size, self.batches, self.choices))
+        size = (self.batches, self.choices)
+
+        def sample_dataset(h):
+            means = np.random.normal(size=size, scale=1)
+            stds = np.random.poisson(size=size, lam=self.lam)
+            return np.tile(means, (h, 1, 1)), np.tile(stds, (h, 1, 1))
+
+        loc, scale = sample_dataset(len(self.dataset))
+        self.dataset = self.random.normal(loc, scale)
+        self.loc = loc
 
     def report(self, **kwargs):
         kwargs = {k: np.mean(v) for k, v in kwargs.items()}
@@ -84,11 +94,11 @@ class TeacherEnv(gym.Env):
         # loc2, scale2 = sample_dataset(len(self.dataset) - half)
         # loc = np.vstack([loc1, loc2])
         # scale = np.vstack([scale1, scale2])
-        loc, scale = sample_dataset(len(self.dataset))
-        self.dataset = self.random.normal(loc, scale)
+        # loc, scale = sample_dataset(len(self.dataset))
+        # self.dataset = self.random.normal(loc, scale)
         our_loop = self.ucb.train_loop(dataset=self.dataset)
         base_loop = self.ucb.train_loop(dataset=self.dataset)
-        optimal = loc.max(axis=-1, initial=-np.inf)
+        optimal = self.loc.max(axis=-1, initial=-np.inf)
 
         baseline_return = np.zeros((self.context_length, self.batches))
 
@@ -110,11 +120,11 @@ class TeacherEnv(gym.Env):
             baseline_actions, baseline_rewards = [
                 np.stack(x) for x in zip(*interact(base_loop, c=1))
             ]
-            chosen_means = loc[t][
+            chosen_means = self.loc[t][
                 np.tile(arange, self.context_length),
                 actions.astype(np.int32).flatten(),
             ].reshape(self.context_length, self.batches)
-            baseline_chosen_means = loc[t][
+            baseline_chosen_means = self.loc[t][
                 np.tile(arange, self.context_length),
                 baseline_actions.astype(int).flatten(),
             ].reshape(self.context_length, self.batches)
@@ -142,7 +152,7 @@ class TeacherEnv(gym.Env):
             if done:
                 self.report(baseline_return=baseline_return)
 
-            coefficient = yield s, r, done, {}
+            coefficient = yield np.ones_like(s), r, done, {}
 
     def render(self, mode="human"):
         pass
