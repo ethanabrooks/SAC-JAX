@@ -58,7 +58,7 @@ class TeacherEnv(gym.Env):
             return np.tile(means, (h, 1, 1)), np.tile(stds, (h, 1, 1))
 
         loc, scale = sample_dataset(len(self.dataset))
-        self.dataset = self.random.normal(loc, scale)
+        self.dataset[:, 0] = 1
         self.loc = loc
 
     def report(self, **kwargs):
@@ -131,8 +131,8 @@ class TeacherEnv(gym.Env):
             baseline_return += np.mean(baseline_rewards)
 
             s = np.stack([actions, rewards], axis=-1)
-            r = np.mean(rewards)
-            # r = np.mean(self.dataset[t][arange, coefficient.astype(np.int32)])
+            # r = np.mean(rewards)
+            r = np.mean(self.dataset[t][arange, coefficient.astype(np.int32)])
             if t % self.report_freq == 0:
                 self.report(
                     baseline_regret=np.mean(optimal[t : t + 1] - baseline_chosen_means),
