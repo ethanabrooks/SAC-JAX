@@ -104,7 +104,7 @@ class TeacherEnv(gym.Env):
 
         next(our_loop)
         next(base_loop)
-        coefficient = 2 * np.ones(self.batches)
+        coefficient = 0 * np.ones(self.batches) # TODO
         ones = np.ones(self.batches * self.context_length, dtype=int)
         arange = np.arange(self.batches)
 
