@@ -58,7 +58,7 @@ class TeacherEnv(gym.Env):
             return np.tile(means, (h, 1, 1)), np.tile(stds, (h, 1, 1))
 
         loc, scale = sample_dataset(len(self.dataset))
-        self.dataset[:, 0] = 1
+        self.dataset[:, :, 0] = 1
         self.loc = loc
 
     def report(self, **kwargs):
