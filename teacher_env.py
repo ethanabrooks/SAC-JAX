@@ -150,7 +150,7 @@ class TeacherEnv(gym.Env):
             if done:
                 self.report(baseline_return=baseline_return)
 
-            coefficient = yield np.ones_like(s), r, done, {}
+            coefficient = yield s, r, done, {}
 
     def render(self, mode="human"):
         pass
