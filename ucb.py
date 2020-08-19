@@ -38,10 +38,11 @@ class UCB:
             if c > 1:
                 rewards = np.zeros((n, d))
                 arange = np.arange(n)
-
-            delta = (np.log(i + 1) / choices) ** (1 / 2)  # TODO
-            upper_bound = r + c * delta
-            choice = np.argmax(upper_bound, axis=-1)
+                choice = np.random.choice(d, size=n)
+            else:
+                delta = (np.log(i + 1) / choices) ** (1 / 2)  # TODO
+                upper_bound = r + c * delta
+                choice = np.argmax(upper_bound, axis=-1)
             choices[arange, choice] += 1
             reward = data[arange, choice]
             rewards[arange, choice] += reward
