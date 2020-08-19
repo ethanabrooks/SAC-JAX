@@ -46,7 +46,7 @@ class TeacherEnv(gym.Env):
         self.action_space = gym.spaces.Box(
             # low=np.ones(batches), high=np.ones(batches) * max_action
             low=np.zeros(batches),
-            high=np.ones(batches) * (choices - 1.1),
+            high=np.ones(batches) * (choices - 0.1),
         )
         self.ucb = UCB(self._seed)
         self.dataset = np.zeros((data_size, self.batches, self.choices))
