@@ -104,7 +104,7 @@ class TeacherEnv(gym.Env):
 
         next(our_loop)
         next(base_loop)
-        coefficient = 0 * np.ones(self.batches) # TODO
+        coefficient = 0 * np.ones(self.batches)  # TODO
         ones = np.ones(self.batches * self.context_length, dtype=int)
         arange = np.arange(self.batches)
 
@@ -138,7 +138,7 @@ class TeacherEnv(gym.Env):
                     baseline_regret=np.mean(optimal[t : t + 1] - baseline_chosen_means),
                     baseline_rewards=np.mean(baseline_rewards),
                     regret=np.mean(optimal[t : t + 1] - chosen_means),
-                    rewards=np.mean(rewards),
+                    rewards=r,
                     coefficient=np.mean(coefficient).item(),
                 )
             try:
