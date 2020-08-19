@@ -35,10 +35,11 @@ class UCB:
         # implementation in vectorized form
         for i, data, in enumerate(dataset[d:], start=d):
             r = rewards / choices
-            # if c is None:
-            c = 2
-            # delta = np.sqrt(3 / 2 * np.log(i + 1) / choices)
-            delta = (np.log(i + 1) / choices) ** (1 / c)
+            if c < 1:
+                rewards = np.zeros((n, d))
+                arange = np.arange(n)
+
+            delta = (np.log(i + 1) / choices) ** (1 / 2)  # TODO
             upper_bound = r + c * delta
             choice = np.argmax(upper_bound, axis=-1)
             choices[arange, choice] += 1

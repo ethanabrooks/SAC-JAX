@@ -45,8 +45,8 @@ class TeacherEnv(gym.Env):
         )
         self.action_space = gym.spaces.Box(
             # low=np.ones(batches), high=np.ones(batches) * max_action
-            low=np.zeros(batches),
-            high=np.ones(batches) * (choices - 0.1),
+            low=np.ones(batches),
+            high=np.ones(batches) * 1.9,
         )
         self.ucb = UCB(self._seed)
         self.dataset = np.zeros((data_size, self.batches, self.choices))
@@ -105,7 +105,6 @@ class TeacherEnv(gym.Env):
         next(our_loop)
         next(base_loop)
         coefficient = 0 * np.ones(self.batches)  # TODO
-        ones = np.ones(self.batches * self.context_length, dtype=int)
         arange = np.arange(self.batches)
 
         def interact(loop, c):
@@ -131,8 +130,7 @@ class TeacherEnv(gym.Env):
             baseline_return += np.mean(baseline_rewards)
 
             s = np.stack([actions, rewards], axis=-1)
-            # r = np.mean(rewards)
-            r = np.mean(self.dataset[t][arange, coefficient.astype(np.int32)])
+            r = np.mean(rewards)
             if t % self.report_freq == 0:
                 self.report(
                     baseline_regret=np.mean(optimal[t : t + 1] - baseline_chosen_means),
