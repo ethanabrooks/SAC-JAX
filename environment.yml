@@ -1,4 +1,4 @@
-name: sac
+name: base
 channels:
   - pytorch
   - defaults
