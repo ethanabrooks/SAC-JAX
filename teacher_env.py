@@ -131,8 +131,8 @@ class TeacherEnv(gym.Env):
             baseline_return += np.mean(baseline_rewards)
 
             s = np.stack([actions, rewards], axis=-1)
-            # r = np.mean(rewards)
-            r = np.mean(self.dataset[t][arange, coefficient.astype(np.int32)])
+            r = np.mean(rewards)
+            # r = np.mean(self.dataset[t][arange, coefficient.astype(np.int32)])
             if t % self.report_freq == 0:
                 self.report(
                     baseline_regret=np.mean(optimal[t : t + 1] - baseline_chosen_means),
