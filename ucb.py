@@ -35,7 +35,7 @@ class UCB:
         # implementation in vectorized form
         for i, data, in enumerate(dataset[d:], start=d):
             r = rewards / choices
-            if c < 1:
+            if c > 1:
                 rewards = np.zeros((n, d))
                 arange = np.arange(n)
 
